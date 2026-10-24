@@ -1,5 +1,5 @@
 // Service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
-const VERSION = 'v1.1.1';
+const VERSION = 'v1.2.0';
 const APP_CACHE = 'viajes-app-' + VERSION;
 const TILE_CACHE = 'viajes-map-v2';
 const MAX_TILES = 8000;
