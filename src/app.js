@@ -134,7 +134,7 @@ function viewToday() {
    ${d.note ? `<div class="daynote">${esc(d.note)}</div>` : ''}
    ${st.cur ? card(st.cur, 'Ahora') + `<div class="row"><button class="btn" data-done="${st.cur.id}">Marcar como hecho</button><button class="btn ghost" data-open="${st.cur.id}">Detalle</button></div></div>` : ''}
    ${st.next ? card(st.next, st.cur ? 'Después' : 'Siguiente') + `
-     ${st.leg ? `<div class="how"><span style="flex:1;min-width:0"><b>${M.MODES[st.leg.mode] || 'Traslado'}</b> · ${esc(st.leg.title)}${M.duration(st.leg, d.tz) ? ' · ' + M.duration(st.leg, d.tz) : ''}</span></div>` : ''}
+     ${st.leg ? `<div class="how"><span style="flex:1;min-width:0">${st.leg.title.toLowerCase().startsWith((M.MODES[st.leg.mode] || '').toLowerCase()) && st.leg.mode ? `<b>${esc(st.leg.title)}</b>` : `<b>${M.MODES[st.leg.mode] || 'Traslado'}</b> · ${esc(st.leg.title)}`}${M.duration(st.leg, d.tz) ? ' · ' + M.duration(st.leg, d.tz) : ''}</span></div>` : ''}
      <div class="row">${howBtn}<button class="btn ghost" data-open="${st.next.id}">Detalle</button>${st.cur ? '' : `<button class="btn ghost" data-done="${st.next.id}">Hecho</button>`}</div></div>`
      : `<div class="panel"><div class="muted">No queda nada pendiente este día.</div></div>`}
    ${st.later.length ? `<div class="panel"><div class="eyebrow">Más tarde</div><div class="later">${st.later.map(i => `<button data-open="${i.id}"><span class="t">${esc(i.start || '—')}</span><span class="x">${esc(i.title)}</span>${i.planning === 'critical' ? '<span class="chip crit"><span class="dot"></span></span>' : '<span></span>'}</button>`).join('')}</div></div>` : ''}

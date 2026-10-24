@@ -151,7 +151,7 @@ const lon2x = (lon, z) => Math.floor((lon + 180) / 360 * 2 ** z);
 const lat2y = (lat, z) => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z); };
 
 /** Lista de teselas a guardar para todos los días con ubicaciones (zoom 10–14, con margen). */
-export function tilesForTrip(trip, template, { minZ = 10, maxZ = 14, pad = 0.01 } = {}) {
+export function tilesForTrip(trip, template, { minZ = 10, maxZ = 14, pad = 0.02 } = {}) {
   const set = new Set();
   for (const day of trip.days) {
     const pts = day.items.filter(i => i.location?.lat != null);
