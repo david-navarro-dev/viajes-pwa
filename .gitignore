@@ -1,0 +1,7 @@
+# Datos personales del viaje: nunca al repositorio
+*.trip.json
+japon-*.json
+copia-*.json
+data/
+node_modules/
+.DS_Store

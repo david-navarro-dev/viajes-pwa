@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Viajes</title>
+<meta name="description" content="Planificador de viajes personal: itinerario, mapa, documentos y checklists sin conexión.">
+<meta name="theme-color" content="#0E1013">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Viajes">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top gut">
+    <button class="tripbtn" id="tripsBtn" aria-label="Ver viajes y ajustes">
+      <span class="trip-name" id="tripName">Viajes</span>
+      <span class="trip-sub" id="tripSub"></span>
+    </button>
+    <div class="clock" id="clock" aria-live="off"></div>
+  </header>
+  <main id="main"><div class="gut" style="padding-block:24px"><p class="muted">Cargando…</p></div></main>
+  <nav class="bottom" aria-label="Secciones" hidden>
+    <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Hoy</button>
+    <button data-view="day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4.5" cy="5" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="19" r="1.3"/></svg>Itinerario</button>
+    <button data-view="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path d="M14 3.5V8h4M9 12.5h6M9 16h6"/></svg>Documentos</button>
+    <button data-view="lists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg>Checklists</button>
+  </nav>
+</div>
+<div id="layer"></div>
+<noscript><p style="padding:16px;color:#fff">Esta app necesita JavaScript.</p></noscript>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
