@@ -99,3 +99,15 @@ test('el dataset real es válido y tiene 18 días', { skip: !existsSync(DATA) },
   const docsLinked = t.documents.filter(d => d.itemId);
   assert.ok(docsLinked.length > 20);
 });
+
+test('hora local de una zona a instante absoluto', () => {
+  assert.equal(new Date(M.zonedEpoch('2026-10-28', '17:15', 'Europe/Madrid')).toISOString(), '2026-10-28T16:15:00.000Z'); // horario de invierno
+  assert.equal(new Date(M.zonedEpoch('2026-10-24', '22:00', 'Europe/Madrid')).toISOString(), '2026-10-24T20:00:00.000Z'); // horario de verano
+  assert.equal(new Date(M.zonedEpoch('2026-10-30', '08:45', 'Asia/Tokyo')).toISOString(), '2026-10-29T23:45:00.000Z');
+});
+test('cuenta atrás', () => {
+  assert.deepEqual(M.breakdown((3 * 86400 + 5 * 3600 + 7 * 60 + 30) * 1000), { days: 3, hours: 5, minutes: 7 });
+  assert.deepEqual(M.breakdown(-5), { days: 0, hours: 0, minutes: 0 });
+  const s = M.tripStart(mini());
+  assert.equal(s.time, '09:00');
+});

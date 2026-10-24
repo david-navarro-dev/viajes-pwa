@@ -1,11 +1,11 @@
 // Service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const APP_CACHE = 'viajes-app-' + VERSION;
-const TILE_CACHE = 'viajes-tiles-v1';
-const MAX_TILES = 3000;
+const TILE_CACHE = 'viajes-map-v2';
+const MAX_TILES = 8000;
 const APP_FILES = [
   './', './index.html', './manifest.webmanifest', './src/app.js', './src/model.js', './src/db.js', './src/map.js', './src/styles.css',
-  './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css',
+  './vendor/maplibre/maplibre-gl.js', './vendor/maplibre/maplibre-gl.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 
@@ -14,7 +14,7 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k.startsWith('viajes-app-') && k !== APP_CACHE) await caches.delete(k);
+    for (const k of await caches.keys()) if ((k.startsWith('viajes-app-') && k !== APP_CACHE) || k === 'viajes-tiles-v1') await caches.delete(k);
     await self.clients.claim();
   })());
 });
@@ -30,15 +30,21 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Teselas del mapa: primero la caché; si no hay conexión y no está guardada, falla sin bloquear nada.
-  if (url.hostname.endsWith('basemaps.cartocdn.com')) {
+  // Mapa (OpenFreeMap): estilo y TileJSON de red primero (para estar al día) con copia de respaldo;
+  // teselas, fuentes y sprites de caché primero. Sin conexión y sin copia, fallan sin bloquear la app.
+  if (url.hostname === 'tiles.openfreemap.org') {
+    const fresh = url.pathname.startsWith('/styles/') || /^\/planet\/?$/.test(url.pathname);
     e.respondWith((async () => {
       const c = await caches.open(TILE_CACHE);
+      if (fresh) {
+        try { const res = await fetch(req); if (res.ok) c.put(req, res.clone()); return res; }
+        catch { return (await c.match(req)) || new Response('', { status: 504 }); }
+      }
       const hit = await c.match(req);
       if (hit) return hit;
       try {
         const res = await fetch(req);
-        if (res.ok) { c.put(req, res.clone()); if (Math.random() < 0.05) trimTiles(); }
+        if (res.ok) { c.put(req, res.clone()); if (Math.random() < 0.02) trimTiles(); }
         return res;
       } catch { return new Response('', { status: 504 }); }
     })());

@@ -1,7 +1,7 @@
 // Viajes · app principal (sin dependencias de compilación).
 import * as M from './model.js';
 import * as DB from './db.js';
-import { DayMap } from './map.js';
+import { DayMap, prefetchTrip, tilesForTrip } from './map.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,7 +33,7 @@ async function boot() {
   } catch (e) { S.error = e.message; }
   const r = S.trip ? M.currentDayIndex(S.trip) : -1;
   if (r > -1) S.day = r;
-  tick(); setInterval(tick, 30000);
+  tick(); setInterval(tick, 15000);
   render();
   registerSW();
 }
@@ -69,6 +69,7 @@ function tick() {
   const tz = S.trip?.trip.tz || 'Asia/Tokyo', home = S.trip?.trip.homeTz || 'Europe/Madrid';
   const a = M.nowIn(tz), b = M.nowIn(home);
   el.innerHTML = `<b>${M.fmtMin(a.min)}</b> ${esc(tzName(tz))}<br>${M.fmtMin(b.min)} ${esc(tzName(home))}${S.online ? '' : '<br><span class="offline">SIN CONEXIÓN</span>'}`;
+  updateNowPanel();
 }
 
 /* ---------------- Render ---------------- */
@@ -77,7 +78,7 @@ function render() {
   $('nav.bottom').hidden = !S.trip;
   if (S.trip) {
     $('#tripName').textContent = S.trip.trip.name;
-    $('#tripSub').textContent = `${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })} · ${S.trip.days.length} días`;
+    $('#tripSub').textContent = `${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })} · ${S.trip.days.length} ${S.trip.days.length === 1 ? 'día' : 'días'}`;
   } else { $('#tripName').textContent = 'Viajes'; $('#tripSub').textContent = 'Sin viaje cargado'; }
   const m = $('#main');
   if (map && mapEl && mapEl.parentNode) mapEl.parentNode.removeChild(mapEl);
@@ -110,7 +111,7 @@ function viewToday() {
   const dl = (S.trip.checklists || []).filter(c => c.day === d.id && c.kind === 'dia');
   let ca = 0, cb = 0; dl.forEach(c => c.sections.forEach(s => s.items.forEach(i => { cb++; if (i.done) ca++; })));
   const daysLeft = Math.ceil((startMs - Date.now()) / 864e5);
-  const status = real > -1 ? '' : Date.now() < startMs ? `Empieza en ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'}. Elige día y hora para ver cómo se comportará esta pantalla.` : Date.now() > endMs ? 'El viaje ha terminado. Elige un día para revisarlo.' : 'Hoy no hay un día del viaje que coincida con la fecha.';
+  const status = real > -1 ? '' : Date.now() < startMs ? 'Antes del viaje: elige un día y una hora para ver cómo funcionará esta pantalla durante el viaje.' : Date.now() > endMs ? 'El viaje ha terminado. Elige un día para revisarlo.' : 'Hoy no hay un día del viaje que coincida con la fecha.';
   const card = (it, label) => `<div class="now-card">
     <div class="label"><span class="eyebrow" style="color:var(--accent)">${label}</span>${it.start ? `<span class="bigtime">${esc(it.start)}${it.end ? ' – ' + esc(it.end) : ''}</span>` : '<span class="muted small">Sin hora</span>'}</div>
     <h3>${esc(it.title)}</h3>
@@ -119,6 +120,7 @@ function viewToday() {
   const howBtn = st.next && M.hasGeo(st.next)
     ? `<a class="btn primary" href="${esc(st.from && st.from !== st.next ? M.mapsDirUrl(st.from.location, st.next.location, st.leg ? st.leg.mode : 'walk') : M.mapsSearchUrl(st.next.location))}" target="_blank" rel="noopener">${st.from && st.from !== st.next ? 'Cómo llegar' : 'Ver en Google Maps'}</a>` : '';
   return `<div class="today gut">
+   ${nowPanel(real, startMs, endMs)}
    <div class="hero-day">
      <div class="eyebrow">${real > -1 ? 'Hoy' : 'Vista previa'} · Día ${d.n} de ${S.trip.days.length} · ${esc(d.city)}</div>
      <h1>${esc(d.title)}</h1>
@@ -152,6 +154,36 @@ function viewToday() {
   </div>`;
 }
 
+/* Fecha, hora actual y cuenta atrás hasta el inicio del viaje (se actualiza en tick). */
+function nowPanel(real, startMs, endMs) {
+  const t = S.trip.trip, home = t.homeTz || 'Europe/Madrid', dest = t.tz;
+  const st = M.tripStart(S.trip);
+  const before = Date.now() < st.at, after = Date.now() > endMs;
+  const startTxt = `${fmtDate(st.date, { weekday: 'short', day: 'numeric', month: 'short' })}${st.time ? ', ' + st.time : ''} hora de ${tzName(st.tz)}`;
+  return `<div class="nowpanel">
+    <div class="np-date" id="npDate"></div>
+    <div class="np-clocks"><div><span class="eyebrow">${esc(tzName(home))}</span><b class="mono" id="npHome"></b></div><div><span class="eyebrow">${esc(tzName(dest))}</span><b class="mono" id="npDest"></b><span class="muted small" id="npDestDay"></span></div></div>
+    ${before ? `<div class="np-count" aria-live="polite"><div class="cd" id="countdown"></div><div class="muted small">hasta el inicio del viaje · ${esc(startTxt)}${st.item ? ' · ' + esc(st.item.title) : ''}</div></div>`
+      : after ? '<div class="np-count"><div class="muted">El viaje ha terminado.</div></div>'
+      : real > -1 ? `<div class="np-count"><div class="cd">Día ${S.trip.days[real].n} <span class="muted">de ${S.trip.days.length}</span></div></div>` : ''}
+  </div>`;
+}
+function updateNowPanel() {
+  if (!S.trip || !$('#npDate')) return;
+  const t = S.trip.trip, home = t.homeTz || 'Europe/Madrid', dest = t.tz, now = new Date();
+  const f = (tz, o) => now.toLocaleString('es-ES', { timeZone: tz, ...o });
+  $('#npDate').textContent = f(home, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('#npHome').textContent = f(home, { hour: '2-digit', minute: '2-digit' });
+  $('#npDest').textContent = f(dest, { hour: '2-digit', minute: '2-digit' });
+  const dh = M.nowIn(home).date, dd = M.nowIn(dest).date;
+  $('#npDestDay').textContent = dh !== dd ? ' · ' + f(dest, { weekday: 'short', day: 'numeric' }) : '';
+  const cd = $('#countdown');
+  if (cd) {
+    const b = M.breakdown(M.tripStart(S.trip).at - Date.now());
+    cd.innerHTML = `<b>${b.days}</b> ${b.days === 1 ? 'día' : 'días'} <b>${b.hours}</b> h <b>${b.minutes}</b> min`;
+  }
+}
+
 /* ----- Itinerario ----- */
 function viewDay() {
   const d = day(), order = M.markerOrder(d), warn = M.chronologyWarnings(d), real = M.currentDayIndex(S.trip);
@@ -163,7 +195,7 @@ function viewDay() {
     if (it.type === 'transport') {
       const cls = it.mode === 'flight' ? 'flight' : M.TRANSIT.includes(it.mode) ? 'transit' : '';
       html += `<div class="seg ${cls} ${sel ? 'sel' : ''} ${it.done ? 'done' : ''}"><div class="when">${esc(it.start || '')}</div>
-        <div class="wrapbar"><button class="bar" data-sel="${it.id}"><span>${M.MODES[it.mode] || 'Traslado'}</span><b>${esc(it.title)}</b>${M.duration(it, d.tz) ? `<span>· ${M.duration(it, d.tz)}</span>` : ''}${it.reservation ? resChip(it.reservation) : ''}</button>${S.edit ? editCtl(it, i, d) : (sel ? `<button class="more" data-open="${it.id}">Detalle ›</button>` : '')}</div></div>`;
+        <div class="wrapbar"><button class="bar" data-sel="${it.id}">${it.title.toLowerCase().startsWith((M.MODES[it.mode] || '').toLowerCase()) && it.mode ? '' : `<span>${M.MODES[it.mode] || 'Traslado'}</span>`}<b>${esc(it.title)}</b>${M.duration(it, d.tz) ? `<span>· ${M.duration(it, d.tz)}</span>` : ''}${it.reservation ? resChip(it.reservation) : ''}</button>${S.edit ? editCtl(it, i, d) : (sel ? `<button class="more" data-open="${it.id}">Detalle ›</button>` : '')}</div></div>`;
       return;
     }
     const tzNote = it.tz && it.tz !== d.tz ? ` <span style="font-size:10px">${esc(tzName(it.tz))}</span>` : '';
@@ -189,6 +221,7 @@ function viewDay() {
    <div class="mapwrap ${S.full ? 'full' : ''}" id="mapwrap">
      <div id="mapSlot"></div>
      <div class="map-legend"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#A3ABB5" stroke-width="2" stroke-dasharray="4 3"/></svg>A pie</span><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#7FA8E6" stroke-width="2.4"/></svg>Transporte</span><span>Líneas = orden, no ruta</span></div>
+     <div class="map-status" id="mapStatus" hidden></div>
      <div class="map-tools"><button class="map-btn" id="fullBtn" aria-label="${S.full ? 'Volver a mapa y agenda' : 'Mapa a pantalla completa'}">${S.full ? ICON.shrink : ICON.expand}</button><button class="map-btn" id="fitBtn" aria-label="Encuadrar el día">${ICON.fit}</button></div>
      ${S.full ? `<div class="fm-chips">${d.items.filter(i => order[i.id]).map(i => `<button class="${S.sel === i.id ? 'sel' : ''}" data-sel="${i.id}"><span class="mono">${order[i.id]}</span>${esc(i.title)}</button>`).join('')}</div>` : ''}
    </div>
@@ -202,25 +235,30 @@ function editCtl(it, i, d) {
   return `<div class="edit-ctl"><button data-mv="-1" data-id="${it.id}" aria-label="Subir" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button><button data-mv="1" data-id="${it.id}" aria-label="Bajar" ${i === d.items.length - 1 ? 'disabled' : ''}>${ICON.down}</button></div>`;
 }
 
+const MAP_MSG = {
+  nostyle: 'Sin mapa base: no hay conexión y esta zona no está guardada. Los marcadores siguen funcionando.',
+  tiles: 'Parte del mapa no se ha podido cargar (sin conexión o zona no guardada).',
+};
+let mapStatus = 'ok';
+function showMapStatus() { const el = $('#mapStatus'); if (el) { el.hidden = mapStatus === 'ok'; el.textContent = MAP_MSG[mapStatus] || ''; } }
 function mountMap() {
   const slot = $('#mapSlot'); if (!slot) return;
-  if (typeof L === 'undefined') { slot.outerHTML = '<div class="map-empty">El mapa no ha podido cargarse. La agenda sigue disponible.</div>'; return; }
   if (!mapEl) {
     mapEl = document.createElement('div'); mapEl.id = 'map';
     slot.replaceWith(mapEl);
-    const off = document.createElement('div'); off.className = 'map-offline'; off.textContent = 'Sin mapa base: sin conexión o teselas no disponibles';
-    mapEl.after(off);
-    map = new DayMap(mapEl, { onSelect: (id, open) => { S.sel = id; if (open) { S.sheet = { type: 'detail', id }; } render(); } });
-  } else {
-    slot.replaceWith(mapEl);
-    if (!mapEl.nextElementSibling?.classList.contains('map-offline')) { const off = document.createElement('div'); off.className = 'map-offline'; off.textContent = 'Sin mapa base: sin conexión o teselas no disponibles'; mapEl.after(off); }
-  }
+    map = new DayMap(mapEl, {
+      onSelect: (id, open) => { S.sel = id; if (open) S.sheet = { type: 'detail', id }; render(); },
+      onStatus: s => { mapStatus = s; showMapStatus(); },
+    });
+  } else slot.replaceWith(mapEl);
+  showMapStatus();
   const d = day();
   const key = d.id + '|' + S.full;
+  map.resize();
   const n = map.render(d, S.sel, { fit: map._last !== key });
+  if (map._last !== key) setTimeout(() => map.fitDay(d), 80);
   map._last = key;
-  map.invalidate();
-  if (S.sel) map.focus(S.sel);
+  if (S.sel) map.focus(d, S.sel);
   const wrap = $('#mapwrap');
   if (!n && wrap) { const e = document.createElement('div'); e.className = 'map-empty'; e.textContent = 'Ningún elemento de este día tiene ubicación.'; wrap.appendChild(e); }
 }
@@ -295,6 +333,11 @@ function viewTrips() {
      <div class="muted small">Guarda tus marcas, notas y cambios. Hazla antes de borrar datos o cambiar de móvil.</div>
      <div class="row"><button class="btn" id="backupBtn">Exportar copia</button><button class="btn ghost" id="backupFilesBtn">Con archivos de documentos</button></div>
      <div id="backupMsg" class="muted small"></div>
+   </div>
+   <div class="panel">
+     <div class="eyebrow">Mapas sin conexión</div>
+     <div class="muted small">Descarga el mapa de las zonas del viaje para verlo sin internet (aprox. ${mapEstimate()}). Hazlo con wifi antes de salir. Las zonas que veas con conexión también se guardan solas.</div>
+     <div id="mapsDl"><button class="btn primary block" id="offlineMaps">Descargar mapas del viaje</button></div>
    </div>
    <div class="panel">
      <div class="eyebrow">Este iPhone</div>
@@ -509,11 +552,35 @@ async function exportBackup(withFiles) {
   } catch (e) { msg.textContent = 'No se pudo crear la copia: ' + e.message; }
 }
 
+let mapsAbort = null, tileTemplate = null;
+function mapEstimate() {
+  const n = tilesForTrip(S.trip, '{z}/{x}/{y}').length;
+  return `${n} teselas, ≈ ${Math.max(1, Math.round(n * 0.045))} MB`;
+}
+async function downloadMaps() {
+  const box = $('#mapsDl'); if (!box) return;
+  if (!navigator.onLine) { box.insertAdjacentHTML('beforeend', '<div class="err">Necesitas conexión para descargar los mapas.</div>'); return; }
+  mapsAbort = new AbortController();
+  box.innerHTML = '<div class="prog"><i id="dlBar" style="width:0%"></i></div><div class="muted small" id="dlTxt">Preparando…</div><button class="btn ghost" id="offlineStop">Detener</button>';
+  try {
+    const r = await prefetchTrip(S.trip, p => {
+      const bar = $('#dlBar'), txt = $('#dlTxt'); if (!bar) return;
+      bar.style.width = (p.done / p.total * 100).toFixed(1) + '%';
+      txt.textContent = `${p.done} de ${p.total} · ${(p.bytes / 1048576).toFixed(1)} MB${p.failed ? ` · ${p.failed} fallidas` : ''}`;
+    }, mapsAbort.signal);
+    await DB.kvSet('mapsAt:' + S.trip.trip.id, new Date().toISOString());
+    box.innerHTML = `<div class="small">${mapsAbort.signal.aborted ? 'Descarga detenida.' : 'Mapas guardados.'} ${(r.bytes / 1048576).toFixed(1)} MB${r.failed ? ` · ${r.failed} teselas no se pudieron descargar: vuelve a intentarlo` : ''}.</div><button class="btn ghost" id="offlineMaps">Volver a descargar</button>`;
+  } catch (e) {
+    box.innerHTML = `<div class="err">${mapsAbort.signal.aborted ? 'Descarga detenida.' : 'No se pudo descargar: ' + esc(e.message)}</div><button class="btn ghost" id="offlineMaps">Reintentar</button>`;
+  }
+  showStorage();
+}
 async function showStorage() {
   const el = $('#storageInfo'); if (!el) return;
   const est = await DB.storageEstimate();
   const persisted = navigator.storage?.persisted ? await navigator.storage.persisted().catch(() => false) : false;
-  el.textContent = `${est ? `Usado ${(est.usage / 1048576).toFixed(1)} MB. ` : ''}${persisted ? 'Datos protegidos frente al borrado automático.' : 'iOS podría borrar los datos si no usas la app en semanas: instala la app en la pantalla de inicio y guarda copias.'}`;
+  const mapsAt = await DB.kvGet('mapsAt:' + S.trip.trip.id).catch(() => null);
+  el.textContent = `${est ? `Usado ${(est.usage / 1048576).toFixed(1)} MB. ` : ''}${mapsAt ? `Mapas descargados el ${new Date(mapsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}. ` : 'Mapas aún no descargados. '}${persisted ? 'Datos protegidos frente al borrado automático.' : 'iOS podría borrar los datos si no usas la app en semanas: instala la app en la pantalla de inicio y guarda copias.'}`;
 }
 
 /* ---------------- Eventos ---------------- */
@@ -559,7 +626,9 @@ document.addEventListener('click', async e => {
   switch (t.id) {
     case 'editBtn': S.edit = !S.edit; render(); break;
     case 'fullBtn': S.full = !S.full; render(); break;
-    case 'fitBtn': { const d = day(); const order = M.markerOrder(d); const pts = d.items.filter(i => order[i.id]); if (pts.length) map.fit(pts); break; }
+    case 'fitBtn': map?.fitDay(day()); break;
+    case 'offlineMaps': downloadMaps(); break;
+    case 'offlineStop': mapsAbort?.abort(); break;
     case 'addItem': S.sheet = { type: 'add' }; renderLayer(); break;
     case 'addDoc': S.sheet = { type: 'newdoc' }; renderLayer(); break;
     case 'saveItem': {

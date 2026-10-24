@@ -233,3 +233,32 @@ export function tripCounts(t) {
     lists: (t.checklists || []).length,
   };
 }
+
+/* ---------- Fechas absolutas y cuenta atrás ---------- */
+/** Instante (ms) de una fecha y hora locales en una zona IANA. */
+export function zonedEpoch(date, time, tz) {
+  const [Y, Mo, D] = date.split('-').map(Number);
+  const m = toMin(time || '00:00') ?? 0;
+  const guess = Date.UTC(Y, Mo - 1, D, Math.floor(m / 60), m % 60);
+  const offset = at => {
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date(at));
+    const g = k => +p.find(x => x.type === k).value;
+    return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - at;
+  };
+  let t = guess - offset(guess);
+  t = guess - offset(t); // segunda pasada por si cruza un cambio de hora
+  return t;
+}
+
+/** Momento de inicio del viaje: primera hora del primer día, o las 00:00 si no tiene horas. */
+export function tripStart(trip) {
+  const d = trip.days[0];
+  const first = d.items.find(i => toMin(i.start) != null);
+  return { at: zonedEpoch(d.date, first ? first.start : '00:00', first?.tz || d.tz), item: first || null, tz: first?.tz || d.tz, date: d.date, time: first ? first.start : null };
+}
+
+/** Desglose de una diferencia en ms. */
+export function breakdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return { days: Math.floor(s / 86400), hours: Math.floor(s % 86400 / 3600), minutes: Math.floor(s % 3600 / 60) };
+}
