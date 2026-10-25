@@ -231,7 +231,7 @@ function updateNowPanel() {
 /* ----- Itinerario ----- */
 function viewDay() {
   const d = day(), order = M.markerOrder(d), warn = M.chronologyWarnings(d), real = M.currentDayIndex(S.trip);
-  const strip = S.trip.days.map((x, i) => `<button class="daypill ${x.kind === 'transit' ? 'transit' : ''} ${i === real ? 'today' : ''}" data-day="${i}" aria-current="${i === S.day}" aria-label="Día ${x.n}, ${fmtDate(x.date, { day: 'numeric', month: 'long' })}"><span class="n">DÍA ${x.n}</span><span class="d">${new Date(x.date + 'T12:00:00Z').getUTCDate()} ${fmtDate(x.date, { month: 'short' }).replace('.', '')}</span></button>`).join('');
+  const strip = S.trip.days.map((x, i) => `<button class="daypill ${x.kind === 'transit' ? 'transit' : ''} ${i === real ? 'today' : ''} ${x.review ? 'rev' : ''}" data-day="${i}" aria-current="${i === S.day}" aria-label="Día ${x.n}, ${fmtDate(x.date, { day: 'numeric', month: 'long' })}${x.review ? ', revisado' : ''}"><span class="n">DÍA ${x.n}</span><span class="d">${new Date(x.date + 'T12:00:00Z').getUTCDate()} ${fmtDate(x.date, { month: 'short' }).replace('.', '')}</span></button>`).join('');
   const lod = d.lodging || {};
   let html = '';
   d.items.forEach((it, i) => {
@@ -258,7 +258,7 @@ function viewDay() {
   });
   return `<div class="gut">
    <div class="daystrip" aria-label="Días del viaje">${strip}</div>
-   <div class="dayhead"><div style="min-width:0"><div class="eyebrow">Día ${d.n} · ${esc(fmtDate(d.date, { weekday: 'long', day: 'numeric', month: 'long' }))}</div><h2>${esc(d.title)}</h2></div>
+   <div class="dayhead"><div style="min-width:0"><div class="eyebrow">Día ${d.n} · ${esc(fmtDate(d.date, { weekday: 'long', day: 'numeric', month: 'long' }))}</div><h2>${esc(d.title)}</h2>${d.review ? `<span class="chip ok rev-chip">${ICON.check}Día revisado</span>` : ''}</div>
      <button class="toggle-edit" id="editBtn" aria-pressed="${S.edit}">${S.edit ? 'Listo' : 'Editar'}</button></div>
    ${lod.name ? `<button class="lodging-strip" ${lod.lat != null ? 'data-lodging' : ''}><span class="ico">H</span><div><div class="nm">${esc(lod.name)}</div><div class="muted" style="font-size:12px">${lod.checkin ? 'Check-in ' + esc(lod.checkin) + ' · ' : ''}Alojamiento de esta noche</div></div></button>` : ''}
    ${d.note ? `<div class="daynote">${esc(d.note)}</div>` : ''}
@@ -499,7 +499,7 @@ function viewTripMap() {
     const d = days[sel], s = M.daySummary(d), lod = d.lodging || {};
     const modes = s.modes.map(m => M.MODES[m]).filter(Boolean).join(', ');
     card = `<div class="tm-card" style="--c:${dayColor(sel)}">
-      <div class="tm-h"><span class="tm-dot"></span><div style="min-width:0;flex:1"><div class="eyebrow">Día ${d.n} · ${esc(fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · ${esc(d.city)}</div><h3>${esc(d.title)}</h3></div><button class="close" data-tday="all" aria-label="Cerrar resumen">${ICON.x}</button></div>
+      <div class="tm-h"><span class="tm-dot"></span><div style="min-width:0;flex:1"><div class="eyebrow">Día ${d.n} · ${esc(fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · ${esc(d.city)}${d.review ? ' · ✓ Revisado' : ''}</div><h3>${esc(d.title)}</h3></div><button class="close" data-tday="all" aria-label="Cerrar resumen">${ICON.x}</button></div>
       <div class="tm-stats"><div><b>${s.stops}</b><span>paradas</span></div><div><b>${s.km ? (s.km < 10 ? s.km.toLocaleString('es-ES') : Math.round(s.km)) : '—'}</b><span>km en línea recta</span></div><div><b>${s.from ? esc(s.from) : '—'}</b><span>${s.to ? 'a ' + esc(s.to) : 'inicio'}</span></div></div>
       ${s.first && s.last && s.first !== s.last ? `<div class="tm-route"><span>${esc(s.first)}</span>${ICON.chev}<span>${esc(s.last)}</span></div>` : ''}
       <div class="muted small">${s.legs ? `${s.legs} traslado${s.legs > 1 ? 's' : ''}${modes ? ' · ' + esc(modes) : ''}` : 'Sin traslados'}${lod.name ? ' · Noche en ' + esc(lod.name) : ''}${s.done ? ` · ${s.done}/${s.total} hechos` : ''}</div>
@@ -571,7 +571,7 @@ function renderDrawer() {
     ${t ? `<button class="dr-trip" data-go="trips"><span class="eyebrow">${stt.k === 'now' ? 'Viaje en curso' : 'Viaje abierto'}</span><b>${esc(t.trip.name)}</b><span class="muted small">${range(t.trip)}</span><span class="dr-count">${esc(stt.big)}</span><span class="dr-switch">Cambiar ${ICON.chev}</span></button>
     <div class="dr-label">Este viaje</div>
     <nav class="dr-nav">
-      ${item('today', ICON.today, 'Hoy')}${item('day', ICON.itin, 'Itinerario', t.days.length + ' días')}${item('map', ICON.map, 'Mapa del viaje')}
+      ${item('today', ICON.today, 'Hoy')}${item('day', ICON.itin, 'Itinerario', `${t.days.filter(x => x.review).length}/${t.days.length} revisados`)}${item('map', ICON.map, 'Mapa del viaje')}
       ${item('docs', ICON.docs, 'Documentos', pend ? pend + ' pend.' : '')}${item('lists', ICON.lists, 'Checklists')}${item('links', ICON.link, 'Enlaces', (t.userLinks || []).length || '')}
     </nav>` : ''}
     <div class="dr-label">Tripfolio</div>
