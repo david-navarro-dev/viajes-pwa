@@ -32,7 +32,7 @@ function geometry(day, selId) {
     const a = pts[k - 1], b = pts[k];
     const between = day.items.slice(day.items.indexOf(a) + 1, day.items.indexOf(b)).filter(x => x.type === 'transport');
     const mode = between.length ? between[between.length - 1].mode : null;
-    const kind = mode === 'walk' ? 'walk' : TRANSIT.includes(mode) ? 'transit' : mode === 'flight' ? 'flight' : mode === 'taxi' ? 'taxi' : 'none';
+    const kind = mode === 'walk' ? 'walk' : TRANSIT.includes(mode) ? 'transit' : mode === 'flight' ? 'flight' : mode === 'taxi' || mode === 'car' ? 'taxi' : 'none';
     const sel = !!selId && (selId === b.id || between.some(x => x.id === selId));
     segs.push({ from: pos[a.id], to: pos[b.id], kind, sel });
   }

@@ -4,7 +4,7 @@
 export const SCHEMA_VERSION = 1;
 
 export const TYPES = { visit: 'Visita', hotel: 'Alojamiento', station: 'Estación', transport: 'Traslado', meal: 'Comida', task: 'Gestión' };
-export const MODES = { walk: 'A pie', metro: 'Metro', train: 'Tren', shinkansen: 'Shinkansen', bus: 'Bus', taxi: 'Taxi', flight: 'Vuelo', boat: 'Barco', ropeway: 'Teleférico' };
+export const MODES = { walk: 'A pie', metro: 'Metro', train: 'Tren', shinkansen: 'Shinkansen', bus: 'Bus', taxi: 'Taxi', car: 'Coche', flight: 'Vuelo', boat: 'Barco', ropeway: 'Teleférico' };
 export const TRANSIT = ['metro', 'train', 'shinkansen', 'bus', 'boat', 'ropeway'];
 export const RES = { booked: ['Reservado', 'ok'], to_buy: ['Por comprar', 'crit'], check: ['Por confirmar', 'acc'], optional: ['Opcional', ''], none: ['Pago en taquilla', ''] };
 
