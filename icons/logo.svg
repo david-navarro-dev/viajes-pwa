@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs>
+<linearGradient id="tft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C2A2E"/><stop offset=".5" stop-color="#151315"/><stop offset="1" stop-color="#0B0A0B"/></linearGradient>
+<linearGradient id="tfs" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#FFD25A"/><stop offset=".35" stop-color="#FF9440"/><stop offset=".68" stop-color="#FF5A5F"/><stop offset="1" stop-color="#D9459C"/></linearGradient>
+<linearGradient id="tfp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB25A"/><stop offset="1" stop-color="#FF4F6A"/></linearGradient>
+<linearGradient id="tfh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<filter id="tff" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>
+<rect width="64" height="64" rx="14.5" fill="url(#tft)"/>
+<rect x=".6" y=".6" width="62.8" height="62.8" rx="14" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/>
+<g><g class="tf-map"><path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#tfs)" opacity=".5" filter="url(#tff)"/>
+<path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#tfs)" stroke="url(#tfs)" stroke-width="2" stroke-linejoin="round"/>
+<path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#tfh)"/>
+<path d="M24.3 19.4 V49.1 M38.7 24.8 V54.5" stroke="#141214" stroke-width="2.4" opacity=".55"/></g>
+<ellipse class="tf-shadow" cx="32" cy="35.6" rx="4.6" ry="1.4" fill="#141214" opacity=".5"/>
+<g class="tf-pin"><path d="M32 8.5 a10 10 0 0 1 10 10 c0 7.8 -10 15.5 -10 15.5 s-10 -7.7 -10 -15.5 a10 10 0 0 1 10 -10z" fill="url(#tfp)" stroke="#141214" stroke-width="3.2" paint-order="stroke"/>
+<path d="M32 8.5 a10 10 0 0 1 10 10 c0 7.8 -10 15.5 -10 15.5 s-10 -7.7 -10 -15.5 a10 10 0 0 1 10 -10z" fill="url(#tfh)"/><circle cx="32" cy="18.5" r="3.4" fill="#F7F1EE"/></g></g></svg>

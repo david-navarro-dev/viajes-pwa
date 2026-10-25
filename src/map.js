@@ -71,11 +71,11 @@ export class DayMap {
       }
       this.map.addSource('order', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       const base = { type: 'line', source: 'order', layout: { 'line-cap': 'round', 'line-join': 'round' } };
-      this.map.addLayer({ ...base, id: 'order-walk', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': ['case', ['get', 'sel'], '#F3B755', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5], 'line-dasharray': [1.5, 1.5] } });
-      this.map.addLayer({ ...base, id: 'order-transit', filter: ['==', ['get', 'kind'], 'transit'], paint: { 'line-color': ['case', ['get', 'sel'], '#F3B755', '#7FA8E6'], 'line-width': ['case', ['get', 'sel'], 4.5, 3] } });
-      this.map.addLayer({ ...base, id: 'order-flight', filter: ['==', ['get', 'kind'], 'flight'], paint: { 'line-color': ['case', ['get', 'sel'], '#F3B755', '#7FA8E6'], 'line-width': 2, 'line-dasharray': [0.5, 2.5] } });
-      this.map.addLayer({ ...base, id: 'order-taxi', filter: ['==', ['get', 'kind'], 'taxi'], paint: { 'line-color': ['case', ['get', 'sel'], '#F3B755', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5] } });
-      this.map.addLayer({ ...base, id: 'order-none', filter: ['==', ['get', 'kind'], 'none'], paint: { 'line-color': ['case', ['get', 'sel'], '#F3B755', '#6B747E'], 'line-width': 2, 'line-dasharray': [0.5, 2] } });
+      this.map.addLayer({ ...base, id: 'order-walk', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5], 'line-dasharray': [1.5, 1.5] } });
+      this.map.addLayer({ ...base, id: 'order-transit', filter: ['==', ['get', 'kind'], 'transit'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#7FA8E6'], 'line-width': ['case', ['get', 'sel'], 4.5, 3] } });
+      this.map.addLayer({ ...base, id: 'order-flight', filter: ['==', ['get', 'kind'], 'flight'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#7FA8E6'], 'line-width': 2, 'line-dasharray': [0.5, 2.5] } });
+      this.map.addLayer({ ...base, id: 'order-taxi', filter: ['==', ['get', 'kind'], 'taxi'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5] } });
+      this.map.addLayer({ ...base, id: 'order-none', filter: ['==', ['get', 'kind'], 'none'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#6B747E'], 'line-width': 2, 'line-dasharray': [0.5, 2] } });
       this.loaded = true;
       this.onStatus('ok');
       if (this.pending) { const p = this.pending; this.pending = null; this.render(...p); }
@@ -134,7 +134,7 @@ export class DayMap {
     const P = ([x, y]) => [W / 2 + (x - cx) * k * sc, H / 2 - (y - cy) * sc];
     const col = { walk: '#B4BCC6', transit: '#7FA8E6', flight: '#7FA8E6', taxi: '#B4BCC6', none: '#6B747E' };
     const dash = { walk: '5 5', transit: '', flight: '1 6', taxi: '', none: '2 5' };
-    const lines = g.segs.map(s => `<polyline fill="none" stroke="${s.sel ? '#F3B755' : col[s.kind]}" stroke-width="${s.sel ? 4 : 2.5}" stroke-dasharray="${dash[s.kind]}" stroke-linecap="round" points="${arc(s.from, s.to).map(P).map(p => p.join(',')).join(' ')}"/>`).join('');
+    const lines = g.segs.map(s => `<polyline fill="none" stroke="${s.sel ? '#FF8A4C' : col[s.kind]}" stroke-width="${s.sel ? 4 : 2.5}" stroke-dasharray="${dash[s.kind]}" stroke-linecap="round" points="${arc(s.from, s.to).map(P).map(p => p.join(',')).join(' ')}"/>`).join('');
     this.el.innerHTML = `<svg width="${W}" height="${H}" style="position:absolute;inset:0">${lines}</svg><div class="svg-note">Mapa esquemático: el mapa base no está disponible en este dispositivo</div>`;
     for (const it of g.pts) {
       const [x, y] = P(g.pos[it.id]);

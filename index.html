@@ -3,26 +3,65 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Viajes</title>
-<meta name="description" content="Planificador de viajes personal: itinerario, mapa, documentos y checklists sin conexión.">
-<meta name="theme-color" content="#0E1013">
+<title>Tripfolio</title>
+<meta name="description" content="Tripfolio: itinerario, mapa, documentos y checklists de tus viajes, sin conexión.">
+<meta name="theme-color" content="#121012">
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Viajes">
+<meta name="apple-mobile-web-app-title" content="Tripfolio">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+<link rel="alternate icon" href="icons/favicon-64.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/startup-750x1334.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/startup-828x1792.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1125x2436.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1242x2688.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1170x2532.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1284x2778.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1179x2556.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1290x2796.png">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1206x2622.png">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/startup-1320x2868.png">
 <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="src/styles.css">
+<style>
+/* Pantalla de inicio (va en línea para pintarse antes que el resto) */
+#splash{position:fixed;inset:0;z-index:100;background:#121012;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity .35s ease}
+#splash.out{opacity:0;pointer-events:none}
+#splash .sp-logo{width:156px;height:156px;overflow:visible}
+#splash .sp-name{font:600 30px/1 -apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;letter-spacing:.2px;color:#F4EEEC;opacity:0;animation:sp-rise .5s .85s both}
+#splash .sp-name b{font-weight:600;background:linear-gradient(90deg,#FF9440,#FF5A5F 60%,#D9459C);-webkit-background-clip:text;background-clip:text;color:transparent}
+#splash .tf-map{transform-origin:32px 37px;animation:sp-unfold .6s cubic-bezier(.2,.8,.2,1) both}
+#splash .tf-pin{animation:sp-drop .6s .5s cubic-bezier(.3,1.5,.5,1) both}
+#splash .tf-shadow{transform-box:fill-box;transform-origin:center;animation:sp-shadow .6s .5s both}
+@keyframes sp-unfold{from{transform:scaleX(.15) scaleY(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes sp-drop{0%{transform:translateY(-26px);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes sp-shadow{from{transform:scale(.2);opacity:0}to{transform:none;opacity:.5}}
+@keyframes sp-rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#splash *{animation:none!important}#splash .sp-name{opacity:1}}
+</style>
 </head>
 <body>
+<div id="splash" role="img" aria-label="Tripfolio"><svg class="sp-logo" viewBox="0 0 64 64" aria-hidden="true"><defs>
+<linearGradient id="spt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C2A2E"/><stop offset=".5" stop-color="#151315"/><stop offset="1" stop-color="#0B0A0B"/></linearGradient>
+<linearGradient id="sps" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#FFD25A"/><stop offset=".35" stop-color="#FF9440"/><stop offset=".68" stop-color="#FF5A5F"/><stop offset="1" stop-color="#D9459C"/></linearGradient>
+<linearGradient id="spp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB25A"/><stop offset="1" stop-color="#FF4F6A"/></linearGradient>
+<linearGradient id="sph" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<filter id="spf" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="2.4"/></filter></defs><g class="tf-map"><path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#sps)" opacity=".5" filter="url(#spf)"/>
+<path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#sps)" stroke="url(#sps)" stroke-width="2" stroke-linejoin="round"/>
+<path d="M12.6 24.4 L24.3 19.4 L38.7 24.8 L50.4 19.9 L50.4 49.6 L38.7 54.5 L24.3 49.1 L12.6 54.1 Z" fill="url(#sph)"/>
+<path d="M24.3 19.4 V49.1 M38.7 24.8 V54.5" stroke="#121012" stroke-width="2.4" opacity=".55"/></g>
+<ellipse class="tf-shadow" cx="32" cy="35.6" rx="4.6" ry="1.4" fill="#121012" opacity=".5"/>
+<g class="tf-pin"><path d="M32 8.5 a10 10 0 0 1 10 10 c0 7.8 -10 15.5 -10 15.5 s-10 -7.7 -10 -15.5 a10 10 0 0 1 10 -10z" fill="url(#spp)" stroke="#121012" stroke-width="3.2" paint-order="stroke"/>
+<path d="M32 8.5 a10 10 0 0 1 10 10 c0 7.8 -10 15.5 -10 15.5 s-10 -7.7 -10 -15.5 a10 10 0 0 1 10 -10z" fill="url(#sph)"/><circle cx="32" cy="18.5" r="3.4" fill="#F7F1EE"/></g></svg><div class="sp-name">Trip<b>folio</b></div></div>
 <div class="app">
   <header class="top gut">
     <button class="tripbtn" id="tripsBtn" aria-label="Ver viajes y ajustes">
-      <span class="trip-name" id="tripName">Viajes</span>
+      <span class="trip-name" id="tripName">Tripfolio</span>
       <span class="trip-sub" id="tripSub"></span>
     </button>
     <div class="clock" id="clock" aria-live="off"></div>

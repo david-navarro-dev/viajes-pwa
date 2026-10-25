@@ -1,4 +1,4 @@
-# Viajes · PWA
+# Tripfolio · PWA de viajes
 
 Planificador de viajes personal para iPhone: itinerario por días, mapa, documentos y checklists. Funciona sin conexión una vez instalada. Sin servidor, sin cuentas y sin datos personales en este repositorio.
 
@@ -48,3 +48,7 @@ Sin paso de compilación: HTML, CSS y módulos JavaScript. Leaflet va incluido e
 - Las líneas del mapa marcan el orden del día, no rutas reales. Las rutas las calcula Google Maps al abrirlo.
 - Las coordenadas del dataset de Japón son aproximadas; los enlaces a Google Maps usan nombre y dirección.
 - Los cambios no vuelven a Notion.
+
+## Marca
+
+Tripfolio: mapa plegado con pin, degradado atardecer sobre fondo oscuro. Los iconos y las imágenes de arranque de iOS se generan con `node tools/brand.mjs` (requiere Playwright); la animación de inicio está en línea en `index.html`.

@@ -1,4 +1,4 @@
-// Viajes · app principal (sin dependencias de compilación).
+// Tripfolio · app principal (sin dependencias de compilación).
 import * as M from './model.js';
 import * as DB from './db.js';
 import { DayMap, prefetchTrip, tilesForTrip } from './map.js';
@@ -35,7 +35,16 @@ async function boot() {
   if (r > -1) S.day = r;
   tick(); setInterval(tick, 15000);
   render();
+  hideSplash();
   registerSW();
+}
+
+// Retira la pantalla de inicio cuando termina su animación (o enseguida con «reducir movimiento»).
+function hideSplash() {
+  const el = document.getElementById('splash'); if (!el) return;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = Math.max(0, (reduce ? 350 : 2100) - performance.now());
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, wait);
 }
 
 async function loadTrip(id) {
@@ -79,7 +88,7 @@ function render() {
   if (S.trip) {
     $('#tripName').textContent = S.trip.trip.name;
     $('#tripSub').textContent = `${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })} · ${S.trip.days.length} ${S.trip.days.length === 1 ? 'día' : 'días'}`;
-  } else { $('#tripName').textContent = 'Viajes'; $('#tripSub').textContent = 'Sin viaje cargado'; }
+  } else { $('#tripName').textContent = 'Tripfolio'; $('#tripSub').textContent = 'Sin viaje cargado'; }
   const m = $('#main');
   if (map && mapEl && mapEl.parentNode) mapEl.parentNode.removeChild(mapEl);
   if (!S.trip || S.view === 'trips') m.innerHTML = viewTrips();

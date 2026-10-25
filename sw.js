@@ -1,12 +1,13 @@
-// Service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
-const VERSION = 'v1.2.0';
+// Tripfolio · service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
+const VERSION = 'v1.3.0';
 const APP_CACHE = 'viajes-app-' + VERSION;
 const TILE_CACHE = 'viajes-map-v2';
 const MAX_TILES = 8000;
 const APP_FILES = [
   './', './index.html', './manifest.webmanifest', './src/app.js', './src/model.js', './src/db.js', './src/map.js', './src/styles.css',
   './vendor/maplibre/maplibre-gl.js', './vendor/maplibre/maplibre-gl.css',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
+  './icons/logo.svg', './icons/favicon-64.png',
 ];
 
 self.addEventListener('install', e => {
