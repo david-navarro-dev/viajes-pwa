@@ -60,20 +60,22 @@
 <path d="M32 8.5 a10 10 0 0 1 10 10 c0 7.8 -10 15.5 -10 15.5 s-10 -7.7 -10 -15.5 a10 10 0 0 1 10 -10z" fill="url(#sph)"/><circle cx="32" cy="18.5" r="3.4" fill="#F7F1EE"/></g></svg><div class="sp-name">Trip<b>folio</b></div></div>
 <div class="app">
   <header class="top gut">
-    <button class="tripbtn" id="tripsBtn" aria-label="Ver viajes y ajustes">
+    <button class="icon-btn" id="menuBtn" aria-label="Abrir menú" aria-controls="drawer" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h11M4 17h16"/></svg></button>
+    <button class="tripbtn" id="tripsBtn" aria-label="Abrir menú del viaje">
       <span class="trip-name" id="tripName">Tripfolio</span>
       <span class="trip-sub" id="tripSub"></span>
     </button>
     <div class="clock" id="clock" aria-live="off"></div>
   </header>
   <main id="main"><div class="gut" style="padding-block:24px"><p class="muted">Cargando…</p></div></main>
-  <nav class="bottom" aria-label="Secciones" hidden>
-    <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Hoy</button>
+  <nav class="bottom" aria-label="Secciones del viaje" hidden>
     <button data-view="day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4.5" cy="5" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="19" r="1.3"/></svg>Itinerario</button>
+    <button data-view="today" class="nav-main"><span class="nav-orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>Hoy</button>
     <button data-view="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path d="M14 3.5V8h4M9 12.5h6M9 16h6"/></svg>Documentos</button>
-    <button data-view="lists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg>Checklists</button>
   </nav>
 </div>
+<div id="fullmap"></div>
+<div id="drawer" aria-hidden="true"></div>
 <div id="layer"></div>
 <noscript><p style="padding:16px;color:#fff">Esta app necesita JavaScript.</p></noscript>
 <script src="vendor/maplibre/maplibre-gl.js"></script>

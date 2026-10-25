@@ -52,3 +52,11 @@ Sin paso de compilación: HTML, CSS y módulos JavaScript. Leaflet va incluido e
 ## Marca
 
 Tripfolio: mapa plegado con pin, degradado atardecer sobre fondo oscuro. Los iconos y las imágenes de arranque de iOS se generan con `node tools/brand.mjs` (requiere Playwright); la animación de inicio está en línea en `index.html`.
+
+## Navegación (v1.4)
+
+- **Inicio**: logo, viaje en curso o próximo (con cuenta atrás), Añadir un viaje, Mis viajes y accesos rápidos.
+- **Menú lateral** (botón ☰ o deslizar desde el borde izquierdo): secciones del viaje (Hoy, Itinerario, Mapa del viaje, Documentos, Checklists, Enlaces) y de la app (Inicio, Mis viajes, Añadir, Ajustes y copias).
+- **Barra inferior**: Itinerario · Hoy · Documentos.
+- **Mapa del viaje**: rutas de todos los días por colores; al tocar una ruta o su número se abre el resumen del día. Sin mapa base, se dibuja un esquema.
+- **Enlaces**: referencias (Google Maps, Pinterest, TikTok, Instagram, YouTube, web) por viaje y opcionalmente por día. Se guardan en `userLinks`, entran en la copia y se conservan al reimportar.

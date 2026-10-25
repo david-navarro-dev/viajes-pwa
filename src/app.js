@@ -1,7 +1,7 @@
 // Tripfolio · app principal (sin dependencias de compilación).
 import * as M from './model.js';
 import * as DB from './db.js';
-import { DayMap, prefetchTrip, tilesForTrip } from './map.js';
+import { DayMap, TripMap, dayColor, prefetchTrip, tilesForTrip } from './map.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -13,16 +13,40 @@ const ICON = {
   expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>',
   shrink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>',
   fit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg>',
+  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  itin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4.5" cy="5" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="19" r="1.3"/></svg>',
+  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 6.5l5-2 7 2.5 5-2v13l-5 2-7-2.5-5 2z"/><path d="M8.5 4.5v13M15.5 7v13"/></svg>',
+  docs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path d="M14 3.5V8h4M9 12.5h6M9 16h6"/></svg>',
+  lists: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>',
+  suitcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7" width="17" height="12.5" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M8 7v12.5M16 7v12.5"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+};
+// Iconos genéricos por tipo de enlace (sin logotipos de marca).
+const LINK_ICON = {
+  gmaps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+  pinterest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/></svg>',
+  youtube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10 9.3v5.4l4.6-2.7z" fill="currentColor"/></svg>',
+  web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.5 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.5-3.6-8.5s1.1-5.9 3.6-8.5z"/></svg>',
 };
 const KIND = { identidad: 'ID', transporte: 'TRN', entrada: 'ENT', alojamiento: 'HTL', tramite: 'TRM', carpeta: 'DIR', otro: 'DOC' };
 
 /* ---------------- Estado ---------------- */
 const S = {
-  trip: null, base: null, trips: [], view: 'today', day: 0, sel: null, edit: false, full: false,
+  trip: null, base: null, trips: [], view: 'home', day: 0, sel: null, edit: false, full: false, drawer: false,
+  tripSel: null, linkFilter: 'all',
   preview: { day: null, min: null }, sheet: null, docFilter: 'day', listTab: 'day', openCl: null,
   online: navigator.onLine, error: null,
 };
-let map = null, mapEl = null, saveTimer = null;
+let map = null, mapEl = null, saveTimer = null, tmap = null, tmapEl = null;
 
 async function boot() {
   try {
@@ -32,7 +56,8 @@ async function boot() {
     DB.requestPersist();
   } catch (e) { S.error = e.message; }
   const r = S.trip ? M.currentDayIndex(S.trip) : -1;
-  if (r > -1) S.day = r;
+  // Durante el viaje se abre directamente en «Hoy»; fuera de él, en la pantalla de inicio.
+  if (r > -1) { S.day = r; S.view = 'today'; }
   tick(); setInterval(tick, 15000);
   render();
   hideSplash();
@@ -82,22 +107,32 @@ function tick() {
 }
 
 /* ---------------- Render ---------------- */
+const TRIP_VIEWS = ['today', 'day', 'map', 'docs', 'lists', 'links', 'settings'];
+const VIEW_TITLE = { home: 'Inicio', trips: 'Mis viajes', add: 'Añadir un viaje', today: 'Hoy', day: 'Itinerario', map: 'Mapa del viaje', docs: 'Documentos', lists: 'Checklists', links: 'Enlaces', settings: 'Ajustes y copias' };
+let lastView = null;
 function render() {
+  if (TRIP_VIEWS.includes(S.view) && !S.trip) S.view = 'home';
+  const inTrip = TRIP_VIEWS.includes(S.view);
   document.querySelectorAll('nav.bottom button').forEach(b => b.setAttribute('aria-current', b.dataset.view === S.view ? 'page' : 'false'));
-  $('nav.bottom').hidden = !S.trip;
-  if (S.trip) {
+  $('nav.bottom').hidden = !inTrip;
+  document.body.dataset.view = S.view;
+  if (inTrip) {
     $('#tripName').textContent = S.trip.trip.name;
-    $('#tripSub').textContent = `${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })} · ${S.trip.days.length} ${S.trip.days.length === 1 ? 'día' : 'días'}`;
-  } else { $('#tripName').textContent = 'Tripfolio'; $('#tripSub').textContent = 'Sin viaje cargado'; }
+    $('#tripSub').textContent = `${VIEW_TITLE[S.view]} · ${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })}`;
+  } else { $('#tripName').textContent = S.view === 'home' ? 'Tripfolio' : VIEW_TITLE[S.view]; $('#tripSub').textContent = S.view === 'home' ? 'Tus viajes, siempre a mano' : 'Tripfolio'; }
   const m = $('#main');
   if (map && mapEl && mapEl.parentNode) mapEl.parentNode.removeChild(mapEl);
-  if (!S.trip || S.view === 'trips') m.innerHTML = viewTrips();
-  else if (S.view === 'today') m.innerHTML = viewToday();
-  else if (S.view === 'day') m.innerHTML = viewDay();
-  else if (S.view === 'docs') m.innerHTML = viewDocs();
-  else if (S.view === 'lists') m.innerHTML = viewLists();
-  if (S.trip && S.view === 'day') mountMap();
+  if (tmap && tmapEl && tmapEl.parentNode) tmapEl.parentNode.removeChild(tmapEl);
+  const html = { home: viewHome, trips: viewTrips, add: viewAdd, settings: viewSettings, today: viewToday, day: viewDay, map: viewTripMap, docs: viewDocs, lists: viewLists, links: viewLinks }[S.view]();
+  m.innerHTML = `<div class="view${lastView !== S.view ? ' enter' : ''}">${html}</div>`;
+  m.classList.toggle('flush', S.view === 'map');
+  lastView = S.view;
+  renderFullMap();
+  if (S.trip && S.view === 'day' && !S.full) mountMap();
+  if (S.trip && S.view === 'map') mountTripMap();
+  renderDrawer();
   renderLayer();
+  if (S.view === 'settings') showStorage();
   tick();
   if (S.view === 'day') { const p = document.querySelector('.daypill[aria-current="true"]'); if (p) p.scrollIntoView({ inline: 'center', block: 'nearest' }); }
 }
@@ -227,19 +262,41 @@ function viewDay() {
      <button class="toggle-edit" id="editBtn" aria-pressed="${S.edit}">${S.edit ? 'Listo' : 'Editar'}</button></div>
    ${lod.name ? `<button class="lodging-strip" ${lod.lat != null ? 'data-lodging' : ''}><span class="ico">H</span><div><div class="nm">${esc(lod.name)}</div><div class="muted" style="font-size:12px">${lod.checkin ? 'Check-in ' + esc(lod.checkin) + ' · ' : ''}Alojamiento de esta noche</div></div></button>` : ''}
    ${d.note ? `<div class="daynote">${esc(d.note)}</div>` : ''}
-   <div class="mapwrap ${S.full ? 'full' : ''}" id="mapwrap">
-     <div id="mapSlot"></div>
-     <div class="map-legend"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#A3ABB5" stroke-width="2" stroke-dasharray="4 3"/></svg>A pie</span><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#7FA8E6" stroke-width="2.4"/></svg>Transporte</span><span>Líneas = orden, no ruta</span></div>
-     <div class="map-status" id="mapStatus" hidden></div>
-     <div class="map-tools"><button class="map-btn" id="fullBtn" aria-label="${S.full ? 'Volver a mapa y agenda' : 'Mapa a pantalla completa'}">${S.full ? ICON.shrink : ICON.expand}</button><button class="map-btn" id="fitBtn" aria-label="Encuadrar el día">${ICON.fit}</button></div>
-     ${S.full ? `<div class="fm-chips">${d.items.filter(i => order[i.id]).map(i => `<button class="${S.sel === i.id ? 'sel' : ''}" data-sel="${i.id}"><span class="mono">${order[i.id]}</span>${esc(i.title)}</button>`).join('')}</div>` : ''}
-   </div>
+   ${S.full ? '' : mapWrapHtml(d, order, false)}
+   ${dayLinks(d)}
    <div class="timeline">${html}
      ${S.edit ? `<button class="btn ghost block" id="addItem">+ Añadir elemento al día ${d.n}</button>` : ''}
    </div>
    <div class="muted small" style="padding-bottom:24px"><a href="${esc(d.source?.url || '#')}" target="_blank" rel="noopener">Abrir el día ${d.n} en Notion</a></div>
   </div>`;
 }
+/* Mapa del día: en línea o a pantalla completa (capa propia sobre la barra inferior, que sigue activa). */
+function mapWrapHtml(d, order, full) {
+  return `<div class="mapwrap ${full ? 'full' : ''}" id="mapwrap">
+     <div id="mapSlot"></div>
+     ${full ? `<div class="fm-top"><button class="fm-close" id="fullClose">${ICON.back}<span>Volver</span></button><div class="fm-title"><span>Día ${d.n}</span><b>${esc(d.title)}</b></div></div>` : ''}
+     <div class="map-legend"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#A3ABB5" stroke-width="2" stroke-dasharray="4 3"/></svg>A pie</span><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#7FA8E6" stroke-width="2.4"/></svg>Transporte</span>${full ? '' : '<span>Líneas = orden, no ruta</span>'}</div>
+     <div class="map-status" id="mapStatus" hidden></div>
+     <div class="map-tools">${full ? '' : `<button class="map-btn" id="fullBtn" aria-label="Mapa a pantalla completa">${ICON.expand}</button>`}<button class="map-btn" id="fitBtn" aria-label="Encuadrar el día">${ICON.fit}</button></div>
+     ${full ? `<div class="fm-chips">${d.items.filter(i => order[i.id]).map(i => `<button class="${S.sel === i.id ? 'sel' : ''}" data-sel="${i.id}"><span class="mono">${order[i.id]}</span>${esc(i.title)}</button>`).join('')}</div>` : ''}
+   </div>`;
+}
+function renderFullMap() {
+  const fm = $('#fullmap');
+  const on = S.full && S.view === 'day' && !!S.trip;
+  fm.classList.toggle('on', on);
+  if (!on) { if (fm.innerHTML) fm.innerHTML = ''; return; }
+  fm.innerHTML = mapWrapHtml(day(), M.markerOrder(day()), true);
+  mountMap();
+  const c = fm.querySelector('.fm-chips .sel'); if (c) c.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+/* Enlaces de referencia asociados a un día (en el itinerario). */
+function dayLinks(d) {
+  const ls = (S.trip.userLinks || []).filter(l => l.day === d.id);
+  if (!ls.length) return '';
+  return `<div class="daylinks"><span class="eyebrow">Enlaces del día</span><div class="dl-row">${ls.map(l => `<a class="dl-chip k-${M.linkKind(l.url)}" href="${esc(l.url)}" target="_blank" rel="noopener"><i>${LINK_ICON[M.linkKind(l.url)]}</i>${esc(l.title)}</a>`).join('')}</div></div>`;
+}
+
 function editCtl(it, i, d) {
   return `<div class="edit-ctl"><button data-mv="-1" data-id="${it.id}" aria-label="Subir" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button><button data-mv="1" data-id="${it.id}" aria-label="Bajar" ${i === d.items.length - 1 ? 'disabled' : ''}>${ICON.down}</button></div>`;
 }
@@ -293,7 +350,7 @@ function viewDocs() {
      <button data-docf="day" aria-pressed="${S.docFilter === 'day'}">Día ${d.n}</button><button data-docf="pending" aria-pressed="${S.docFilter === 'pending'}">Pendientes · ${pend}</button><button data-docf="all" aria-pressed="${S.docFilter === 'all'}">Todos</button></div>
    ${groups.size ? [...groups].map(([k, v]) => `<div class="doc-group"><h4>${esc(label(k))}</h4>${v.map(row).join('')}</div>`).join('') : `<div class="panel"><div class="muted">No hay documentos para el día ${d.n}. Cambia de día en Itinerario o mira “Todos”.</div></div>`}
    <button class="btn ghost block" id="addDoc">+ Añadir documento</button>
-   <div class="notice">Los archivos que añades (PDF, capturas, QR) se guardan solo en este iPhone y se abren sin conexión. No se suben a ningún sitio. Haz una copia de seguridad con archivos desde Viajes.</div>
+   <div class="notice">Los archivos que añades (PDF, capturas, QR) se guardan solo en este iPhone y se abren sin conexión. No se suben a ningún sitio. Haz una copia de seguridad con archivos desde Ajustes y copias.</div>
   </div>`;
 }
 
@@ -318,28 +375,96 @@ function viewLists() {
   </div>`;
 }
 
-/* ----- Viajes, importar y copias ----- */
+/* ----- Inicio ----- */
+const pageHead = (title, sub) => `<div class="page-head"><h1>${esc(title)}</h1>${sub ? `<div class="muted">${sub}</div>` : ''}</div>`;
+function tripState(t) {
+  const now = Date.now(), st = Date.parse(t.startDate + 'T00:00:00'), en = Date.parse(t.endDate + 'T23:59:59');
+  if (now < st) { const d = Math.ceil((st - now) / 864e5); return { k: 'soon', label: 'Próximo', big: d === 1 ? 'Mañana' : `Faltan ${d} días` }; }
+  if (now <= en) { const d = Math.floor((now - st) / 864e5) + 1, tot = Math.round((en - st) / 864e5); return { k: 'now', label: 'En curso', big: `Día ${d} de ${tot}` }; }
+  return { k: 'past', label: 'Terminado', big: 'Viaje terminado' };
+}
+const range = t => `${fmtDate(t.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(t.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+function viewHome() {
+  const h = new Date().getHours();
+  const hi = h < 6 ? 'Buenas noches' : h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
+  const t = S.trip?.trip;
+  const stt = t ? tripState(t) : null;
+  const hero = t ? `<button class="hero-trip ${stt.k}" data-go="today">
+      <span class="ht-glow" aria-hidden="true"></span>
+      <span class="eyebrow">${stt.k === 'now' ? 'Viaje en curso' : stt.k === 'soon' ? 'Tu próximo viaje' : 'Último viaje'}</span>
+      <span class="ht-name">${esc(t.name)}</span>
+      <span class="ht-dates">${range(t)} · ${S.trip.days.length} días</span>
+      <span class="ht-big">${esc(stt.big)}</span>
+      <span class="ht-cta">Continuar ${ICON.chev}</span></button>`
+    : `<button class="hero-trip empty" data-go="add"><span class="ht-glow" aria-hidden="true"></span><span class="eyebrow">Empieza aquí</span><span class="ht-name">Tu primer viaje</span><span class="ht-dates">Importa el itinerario y tenlo siempre a mano, también sin conexión.</span><span class="ht-cta">Añadir un viaje ${ICON.chev}</span></button>`;
+  return `<div class="home gut">
+    <div class="home-brand"><img src="icons/logo.svg" alt="" width="52" height="52"><div><div class="hb-name">Trip<b>folio</b></div><div class="muted small">${hi} · ${esc(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }))}</div></div></div>
+    ${hero}
+    <div class="home-grid">
+      <button class="tile" data-go="add"><span class="ti-ico">${ICON.plus}</span><b>Añadir un viaje</b><span>Desde Notion o una copia</span></button>
+      <button class="tile" data-go="trips"><span class="ti-ico">${ICON.suitcase}</span><b>Mis viajes</b><span>${S.trips.length ? S.trips.length + (S.trips.length === 1 ? ' viaje' : ' viajes') : 'Aún ninguno'}</span></button>
+    </div>
+    ${t ? `<div class="quick"><span class="eyebrow">Accesos rápidos</span>
+      <div class="q-row">
+        <button data-go="map"><i>${ICON.map}</i>Mapa del viaje</button>
+        <button data-go="lists"><i>${ICON.lists}</i>Checklists</button>
+        <button data-go="links"><i>${ICON.link}</i>Enlaces</button>
+        <button data-go="settings"><i>${ICON.gear}</i>Ajustes</button>
+      </div></div>` : ''}
+  </div>`;
+}
+
+/* ----- Mis viajes ----- */
 function viewTrips() {
-  const welcome = !S.trip;
-  const t = S.trip, c = t ? M.tripCounts(t) : null;
-  const conf = t?.conflicts || [];
-  return `<div class="${welcome ? 'welcome' : 'trips'} gut">
-   ${welcome ? `<div class="eyebrow">Planificador de viajes</div><h1>Carga tu viaje para empezar</h1>
-     <p class="muted" style="margin:0">Importa el archivo JSON del viaje (por ejemplo <span class="mono">japon-2026.json</span>). Se guarda solo en este iPhone y funciona sin conexión.</p>` : '<div class="eyebrow">Tus viajes</div>'}
+  const act = S.trip?.trip.id;
+  return `<div class="trips gut">
+   ${pageHead('Mis viajes', S.trips.length ? `${S.trips.length} ${S.trips.length === 1 ? 'viaje guardado' : 'viajes guardados'} en este iPhone` : '')}
    ${S.error ? `<div class="err">${esc(S.error)}</div>` : ''}
-   ${S.trips.map(x => `<button class="tripcard ${t && t.trip.id === x.id ? 'active' : ''}" data-trip="${x.id}"><h3>${esc(x.name)}</h3><div class="muted small">${fmtDate(x.startDate, { day: 'numeric', month: 'long' })} – ${fmtDate(x.endDate, { day: 'numeric', month: 'long', year: 'numeric' })}</div>${t && t.trip.id === x.id ? `<div class="small">${c.days} días · ${c.items} elementos · ${c.done} hechos · ${c.docs} documentos</div><div class="muted small">Importado de ${esc(t.trip.source?.title || 'archivo')} · ${t.exportedAt ? new Date(t.exportedAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</div>` : '<div class="muted small">Toca para abrirlo</div>'}</button>`).join('')}
+   ${S.trips.length ? S.trips.map(x => { const st = tripState(x); return `<button class="tcard ${x.id === act ? 'active' : ''}" data-trip="${x.id}">
+      <span class="tc-band" aria-hidden="true"></span>
+      <span class="tc-body"><span class="row" style="gap:6px"><span class="chip ${st.k === 'now' ? 'acc' : ''}">${st.label}</span>${x.id === act ? '<span class="chip ok">Abierto</span>' : ''}</span>
+      <span class="tc-name">${esc(x.name)}</span><span class="muted small">${range(x)}</span><span class="tc-big">${esc(st.big)}</span></span>
+      <span class="tc-go">${ICON.chev}</span></button>`; }).join('')
+     : `<div class="empty-state"><span class="es-ico">${ICON.suitcase}</span><b>Aún no hay viajes</b><span class="muted small">Añade el primero importando el archivo del viaje.</span></div>`}
+   <button class="btn primary block" data-go="add">${ICON.plus} Añadir un viaje</button>
+  </div>`;
+}
+
+/* ----- Añadir un viaje ----- */
+function viewAdd() {
+  return `<div class="add gut">
+   ${pageHead('Añadir un viaje', 'Elige cómo quieres traerlo. Todo se guarda solo en este iPhone y funciona sin conexión.')}
+   <div class="opt-card">
+     <span class="oc-ico">${ICON.docs}</span>
+     <div><b>Importar desde Notion</b><div class="muted small">Archivo JSON generado a partir del itinerario. Si el viaje ya existe, se actualiza conservando lo que hayas marcado, tus notas y tus enlaces.</div></div>
+   </div>
+   <div class="opt-card">
+     <span class="oc-ico">${ICON.suitcase}</span>
+     <div><b>Restaurar una copia de seguridad</b><div class="muted small">El archivo <span class="mono">copia-….json</span> que exportaste desde Ajustes. Recupera el viaje tal como lo guardaste.</div></div>
+   </div>
+   <label class="btn primary block" for="importFile">Elegir archivo JSON</label>
+   <input type="file" id="importFile" accept="application/json,.json" hidden>
+   <div id="importMsg"></div>
+   <div class="opt-card soon"><span class="oc-ico">${ICON.plus}</span><div><b>Crear desde plantilla</b><div class="muted small">Próximamente: plantilla de Notion para preparar nuevos viajes.</div></div></div>
+  </div>`;
+}
+
+/* ----- Ajustes y copias del viaje abierto ----- */
+function viewSettings() {
+  const t = S.trip;
+  const conf = t?.conflicts || [];
+  return `<div class="trips gut">
+   ${pageHead('Ajustes y copias', esc(t.trip.name))}
    ${conf.length ? `<div class="panel"><div class="eyebrow">Conflictos de la última importación · ${conf.length}</div><div class="muted small">Cambiaste estos datos en el móvil y Notion también los cambió. Ahora se muestra tu versión.</div>
      ${conf.map((x, i) => `<div class="conf"><div><b>${esc(x.title)}</b> · ${esc(x.field)}</div><div class="small">Tuyo: <span class="mono">${esc(x.local ?? '—')}</span> · Notion: <span class="mono">${esc(x.incoming ?? '—')}</span></div><div class="row"><button class="btn" data-conf="${i}" data-keep="local">Mantener el mío</button><button class="btn ghost" data-conf="${i}" data-keep="incoming">Usar el de Notion</button></div></div>`).join('')}</div>` : ''}
    <div class="panel">
-     <div class="eyebrow">${welcome ? 'Importar' : 'Actualizar o añadir un viaje'}</div>
-     <div class="muted small">${welcome ? 'Elige el archivo desde Archivos, iCloud o AirDrop.' : 'Un archivo de Notion actualizado se fusiona con tus cambios: conserva lo hecho, tus notas y lo que hayas añadido, y te avisa de los conflictos. Una copia de seguridad restaura el viaje tal como lo guardaste.'}</div>
-     <label class="btn primary block" for="importFile">Elegir archivo JSON</label>
-     <input type="file" id="importFile" accept="application/json,.json" hidden>
-     <div id="importMsg"></div>
+     <div class="eyebrow">Actualizar desde Notion</div>
+     <div class="muted small">Importa el JSON actualizado: se fusiona con tus cambios (marcas, notas, enlaces y lo que hayas añadido) y te avisa de los conflictos.</div>
+     <button class="btn block" data-go="add">Importar archivo</button>
    </div>
-   ${t ? `<div class="panel">
+   <div class="panel">
      <div class="eyebrow">Copia de seguridad</div>
-     <div class="muted small">Guarda tus marcas, notas y cambios. Hazla antes de borrar datos o cambiar de móvil.</div>
+     <div class="muted small">Guarda tus marcas, notas, enlaces y cambios. Hazla antes de borrar datos o cambiar de móvil.</div>
      <div class="row"><button class="btn" id="backupBtn">Exportar copia</button><button class="btn ghost" id="backupFilesBtn">Con archivos de documentos</button></div>
      <div id="backupMsg" class="muted small"></div>
    </div>
@@ -352,12 +477,12 @@ function viewTrips() {
      <div class="eyebrow">Este iPhone</div>
      <div id="storageInfo" class="muted small">Calculando espacio…</div>
      <div id="dangerArea"><button class="btn danger ghost" id="deleteTrip">Borrar este viaje del móvil</button></div>
-   </div>` : ''}
+   </div>
    <div class="panel">
      <div class="eyebrow">Límites</div>
      <ul class="limits">
        <li>Las posiciones del mapa son aproximadas y las líneas indican el orden, no la ruta. Las rutas reales las calcula Google Maps al abrirlo.</li>
-       <li>Sin conexión, la agenda, documentos y checklists funcionan; el mapa base solo muestra zonas ya vistas, y Google Maps necesita internet.</li>
+       <li>Sin conexión, la agenda, documentos y checklists funcionan; el mapa base solo muestra zonas ya vistas, y Google Maps y los enlaces necesitan internet.</li>
        <li>Los cambios se guardan solo en este iPhone y no vuelven a Notion.</li>
        <li>Si iOS borra los datos de la web, se recuperan con la copia de seguridad.</li>
      </ul>
@@ -365,11 +490,110 @@ function viewTrips() {
   </div>`;
 }
 
+/* ----- Mapa del viaje ----- */
+function viewTripMap() {
+  const sel = S.tripSel, days = S.trip.days;
+  const chips = `<button data-tday="all" class="${sel == null ? 'sel' : ''}">Todo el viaje</button>` + days.map((d, i) => `<button data-tday="${i}" class="${sel === i ? 'sel' : ''}" style="--c:${dayColor(i)}"><i></i>Día ${d.n}</button>`).join('');
+  let card = '';
+  if (sel != null) {
+    const d = days[sel], s = M.daySummary(d), lod = d.lodging || {};
+    const modes = s.modes.map(m => M.MODES[m]).filter(Boolean).join(', ');
+    card = `<div class="tm-card" style="--c:${dayColor(sel)}">
+      <div class="tm-h"><span class="tm-dot"></span><div style="min-width:0;flex:1"><div class="eyebrow">Día ${d.n} · ${esc(fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · ${esc(d.city)}</div><h3>${esc(d.title)}</h3></div><button class="close" data-tday="all" aria-label="Cerrar resumen">${ICON.x}</button></div>
+      <div class="tm-stats"><div><b>${s.stops}</b><span>paradas</span></div><div><b>${s.km ? (s.km < 10 ? s.km.toLocaleString('es-ES') : Math.round(s.km)) : '—'}</b><span>km en línea recta</span></div><div><b>${s.from ? esc(s.from) : '—'}</b><span>${s.to ? 'a ' + esc(s.to) : 'inicio'}</span></div></div>
+      ${s.first && s.last && s.first !== s.last ? `<div class="tm-route"><span>${esc(s.first)}</span>${ICON.chev}<span>${esc(s.last)}</span></div>` : ''}
+      <div class="muted small">${s.legs ? `${s.legs} traslado${s.legs > 1 ? 's' : ''}${modes ? ' · ' + esc(modes) : ''}` : 'Sin traslados'}${lod.name ? ' · Noche en ' + esc(lod.name) : ''}${s.done ? ` · ${s.done}/${s.total} hechos` : ''}</div>
+      ${s.highlights.length ? `<div class="tm-hl">${s.highlights.map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>` : ''}
+      <div class="row"><button class="btn primary" data-goday="${sel}" style="flex:1">Ver el día ${d.n}</button><button class="btn ghost" data-tstep="-1" aria-label="Día anterior" ${sel === 0 ? 'disabled' : ''}>${ICON.back}</button><button class="btn ghost" data-tstep="1" aria-label="Día siguiente" ${sel === days.length - 1 ? 'disabled' : ''}>${ICON.chev}</button></div>
+    </div>`;
+  } else card = '<div class="tm-hint">Toca una ruta o un número para ver el resumen del día</div>';
+  return `<div class="tripmap">
+    <div class="tm-chips" role="group" aria-label="Elegir día">${chips}</div>
+    <div class="tm-map"><div id="tmapSlot"></div><div class="map-status" id="tmapStatus" hidden></div>
+      <div class="map-tools"><button class="map-btn" id="tmFit" aria-label="Encuadrar">${ICON.fit}</button></div></div>
+    ${card}
+  </div>`;
+}
+function mountTripMap() {
+  const slot = $('#tmapSlot'); if (!slot) return;
+  const first = !tmapEl;
+  if (first) {
+    tmapEl = document.createElement('div'); tmapEl.id = 'tmap';
+    slot.replaceWith(tmapEl);
+    tmap = new TripMap(tmapEl, {
+      onSelect: i => { if (S.tripSel === i) return; S.tripSel = i; render(); },
+      onStatus: s => { const el = $('#tmapStatus'); if (el) { el.hidden = s === 'ok'; el.textContent = MAP_MSG[s] || ''; } },
+    });
+  } else slot.replaceWith(tmapEl);
+  tmap.resize();
+  const key = S.trip.trip.id + '|' + S.tripSel;
+  tmap.render(S.trip, S.tripSel, { fit: false });
+  if (tmap._key !== key) {
+    const pad = S.tripSel != null ? { top: 60, bottom: Math.min(330, (tmapEl.clientHeight || 500) * 0.55), left: 40, right: 40 } : null;
+    setTimeout(() => (S.tripSel != null ? tmap.fitDay(S.tripSel, pad) : tmap.fitAll()), first ? 120 : 30);
+  }
+  tmap._key = key;
+  const c = document.querySelector('.tm-chips .sel'); if (c) c.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+
+/* ----- Enlaces de referencia ----- */
+function viewLinks() {
+  const all = S.trip.userLinks || [];
+  const counts = {}; all.forEach(l => { const k = M.linkKind(l.url); counts[k] = (counts[k] || 0) + 1; });
+  if (S.linkFilter !== 'all' && !counts[S.linkFilter]) S.linkFilter = 'all';
+  const list = S.linkFilter === 'all' ? all : all.filter(l => M.linkKind(l.url) === S.linkFilter);
+  const dayOf = id => S.trip.days.find(d => d.id === id);
+  const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+  const card = l => { const k = M.linkKind(l.url), d = l.day ? dayOf(l.day) : null; return `<div class="lk k-${k}">
+      <a class="lk-main" href="${esc(l.url)}" target="_blank" rel="noopener"><i class="lk-ico">${LINK_ICON[k]}</i>
+        <span class="lk-txt"><span class="tt">${esc(l.title)}</span><span class="ds">${M.LINK_KINDS[k]} · ${esc(host(l.url))}${d ? ` · Día ${d.n}` : ''}</span>${l.note ? `<span class="nt">${esc(l.note)}</span>` : ''}</span>
+        <span class="lk-ext">${ICON.ext}</span></a>
+      <button class="lk-more" data-linkedit="${l.id}" aria-label="Editar enlace">${ICON.more}</button></div>`; };
+  return `<div class="links gut">
+   ${pageHead('Enlaces', all.length ? `${all.length} ${all.length === 1 ? 'enlace' : 'enlaces'} de referencia` : 'Ideas e inspiración para el viaje')}
+   ${all.length ? `<div class="chips-scroll" role="group" aria-label="Filtrar enlaces"><button data-lf="all" aria-pressed="${S.linkFilter === 'all'}">Todos · ${all.length}</button>${Object.keys(M.LINK_KINDS).filter(k => counts[k]).map(k => `<button data-lf="${k}" aria-pressed="${S.linkFilter === k}">${M.LINK_KINDS[k]} · ${counts[k]}</button>`).join('')}</div>
+     <div class="lk-list">${list.map(card).join('')}</div>`
+    : `<div class="empty-state"><span class="es-ico">${ICON.link}</span><b>Guarda aquí tus referencias</b><span class="muted small">Listas de Google Maps, tableros de Pinterest, vídeos de YouTube o TikTok, reels de Instagram… Copia el enlace en la app y pégalo aquí.</span></div>`}
+   <button class="btn primary block" id="addLink">${ICON.plus} Añadir enlace</button>
+   <div class="muted small">Los enlaces se abren en su app o en el navegador y necesitan conexión. Se incluyen en la copia de seguridad y se conservan al actualizar desde Notion.</div>
+  </div>`;
+}
+
+/* ----- Menú lateral ----- */
+function renderDrawer() {
+  const dr = $('#drawer'), t = S.trip;
+  const pend = t ? (t.documents || []).filter(x => x.status === 'pending' && !x.files?.length).length : 0;
+  const item = (v, ico, label, badge) => `<button class="dr-item" data-go="${v}" aria-current="${S.view === v ? 'page' : 'false'}"><i>${ico}</i><span>${label}</span>${badge ? `<em>${badge}</em>` : ''}</button>`;
+  const stt = t ? tripState(t.trip) : null;
+  dr.innerHTML = `<div class="dr-scrim" data-drclose></div>
+   <aside class="dr-panel" role="dialog" aria-modal="true" aria-label="Menú">
+    <div class="dr-head"><img src="icons/logo.svg" alt="" width="40" height="40"><div class="dr-brand">Trip<b>folio</b></div><button class="close" data-drclose aria-label="Cerrar menú">${ICON.x}</button></div>
+    ${t ? `<button class="dr-trip" data-go="trips"><span class="eyebrow">${stt.k === 'now' ? 'Viaje en curso' : 'Viaje abierto'}</span><b>${esc(t.trip.name)}</b><span class="muted small">${range(t.trip)}</span><span class="dr-count">${esc(stt.big)}</span><span class="dr-switch">Cambiar ${ICON.chev}</span></button>
+    <div class="dr-label">Este viaje</div>
+    <nav class="dr-nav">
+      ${item('today', ICON.today, 'Hoy')}${item('day', ICON.itin, 'Itinerario', t.days.length + ' días')}${item('map', ICON.map, 'Mapa del viaje')}
+      ${item('docs', ICON.docs, 'Documentos', pend ? pend + ' pend.' : '')}${item('lists', ICON.lists, 'Checklists')}${item('links', ICON.link, 'Enlaces', (t.userLinks || []).length || '')}
+    </nav>` : ''}
+    <div class="dr-label">Tripfolio</div>
+    <nav class="dr-nav">${item('home', ICON.home, 'Inicio')}${item('trips', ICON.suitcase, 'Mis viajes', S.trips.length || '')}${item('add', ICON.plus, 'Añadir un viaje')}${t ? item('settings', ICON.gear, 'Ajustes y copias') : ''}</nav>
+    <div class="dr-foot">Funciona sin conexión · los datos se quedan en este iPhone</div>
+   </aside>`;
+  dr.classList.toggle('open', S.drawer);
+  dr.setAttribute('aria-hidden', String(!S.drawer));
+  $('#menuBtn').setAttribute('aria-expanded', String(S.drawer));
+}
+function setDrawer(open) {
+  S.drawer = open;
+  const dr = $('#drawer'); dr.classList.toggle('open', open); dr.setAttribute('aria-hidden', String(!open));
+  $('#menuBtn').setAttribute('aria-expanded', String(open));
+  if (open) setTimeout(() => dr.querySelector('.dr-item[aria-current="page"], .dr-item')?.focus({ preventScroll: true }), 260);
+}
+
 /* ---------------- Hojas ---------------- */
 function renderLayer() {
   const ly = $('#layer');
   if (!S.sheet) { ly.innerHTML = ''; return; }
-  const body = S.sheet.type === 'detail' ? sheetDetail() : S.sheet.type === 'add' ? sheetAdd() : S.sheet.type === 'doc' ? sheetDoc() : S.sheet.type === 'newdoc' ? sheetNewDoc() : S.sheet.type === 'import' ? sheetImport() : '';
+  const body = S.sheet.type === 'detail' ? sheetDetail() : S.sheet.type === 'add' ? sheetAdd() : S.sheet.type === 'doc' ? sheetDoc() : S.sheet.type === 'newdoc' ? sheetNewDoc() : S.sheet.type === 'import' ? sheetImport() : S.sheet.type === 'link' ? sheetLink() : '';
   ly.innerHTML = `<div class="scrim" id="scrim"></div><div class="sheet gut" role="dialog" aria-modal="true">${body}</div>`;
   if (S.sheet.type === 'doc') loadDocFiles();
 }
@@ -471,6 +695,22 @@ function sheetNewDoc() {
   </div>`;
 }
 
+function sheetLink() {
+  const l = S.sheet.id ? (S.trip.userLinks || []).find(x => x.id === S.sheet.id) : null;
+  const canPaste = !!navigator.clipboard?.readText;
+  return head('Enlaces', l ? 'Editar enlace' : 'Añadir enlace') + `<div class="sh-body">
+   <label class="field" for="lUrl">Enlace<div class="paste-row"><input id="lUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://…" value="${esc(l?.url || '')}">${canPaste ? '<button class="btn" id="lPaste" type="button">Pegar</button>' : ''}</div></label>
+   <div id="lKind" class="lkind">${l ? kindBadge(l.url) : '<span class="muted small">Pega un enlace de Google Maps, Pinterest, TikTok, Instagram, YouTube o cualquier web.</span>'}</div>
+   <label class="field" for="lTitle">Título<input id="lTitle" autocomplete="off" placeholder="${l ? '' : 'Se rellena solo si lo dejas vacío'}" value="${esc(l?.title || '')}"></label>
+   <label class="field" for="lDay">Día (opcional)<select id="lDay"><option value="">Todo el viaje</option>${S.trip.days.map(x => `<option value="${x.id}" ${l?.day === x.id ? 'selected' : ''}>Día ${x.n} · ${fmtDate(x.date)} · ${esc(x.title)}</option>`).join('')}</select></label>
+   <label class="field" for="lNote">Nota<textarea id="lNote" placeholder="Por qué lo guardas, qué pedir, a qué hora ir…">${esc(l?.note || '')}</textarea></label>
+   <div id="lErr" class="err"></div>
+   <button class="btn primary block" id="lSave">${l ? 'Guardar cambios' : 'Añadir enlace'}</button>
+   ${l ? `<button class="btn danger block" id="lDel">Borrar enlace</button>` : ''}
+  </div>`;
+}
+const kindBadge = url => { const k = M.linkKind(url); return `<span class="chip k-${k}"><i class="ci">${LINK_ICON[k]}</i>${M.LINK_KINDS[k]}</span>`; };
+
 function sheetImport() {
   const p = S.sheet.pending;
   const s = p.summary;
@@ -479,7 +719,7 @@ function sheetImport() {
      <div class="small">${M.tripCounts(p.data).days} días · ${M.tripCounts(p.data).items} elementos · ${M.tripCounts(p.data).done} hechos${p.data.files?.length ? ` · ${p.data.files.length} archivos` : ''}</div>`
     : p.replaces ? `<div class="small">Se fusionará con tu copia actual:</div>
      <ul class="limits"><li>${s.added} elementos nuevos</li><li>${s.updated} elementos actualizados</li><li>${s.kept} con cambios tuyos que se conservan</li>${s.localOnly ? `<li>${s.localOnly} añadidos por ti que se mantienen</li>` : ''}${s.missing ? `<li>${s.missing} que ya no están en Notion: se mantienen marcados, no se borran</li>` : ''}</ul>
-     ${p.conflicts.length ? `<div class="warn">${p.conflicts.length} conflicto${p.conflicts.length > 1 ? 's' : ''}: se mantiene tu versión y podrás elegir después en Viajes.</div>` : ''}
+     ${p.conflicts.length ? `<div class="warn">${p.conflicts.length} conflicto${p.conflicts.length > 1 ? 's' : ''}: se mantiene tu versión y podrás elegir después en Ajustes y copias.</div>` : ''}
      <div class="muted small">Se conservan las marcas de hecho, tus notas, los checklists y los archivos de documentos.</div>`
     : `<div class="small">${M.tripCounts(p.data).days} días · ${M.tripCounts(p.data).items} elementos · ${M.tripCounts(p.data).docs} documentos · ${M.tripCounts(p.data).lists} checklists</div>`}
    <button class="btn primary block" id="importApply">${p.kind === 'backup' ? 'Restaurar' : p.replaces ? 'Aplicar actualización' : 'Importar viaje'}</button>
@@ -531,7 +771,7 @@ async function applyImport() {
     await DB.kvSet('trips', S.trips);
     await DB.kvSet('active', meta.id);
     await loadTrip(meta.id);
-    S.sheet = null; S.view = 'today'; S.error = null;
+    S.sheet = null; S.view = 'today'; S.error = null; S.tripSel = null;
     render();
     toast(p.kind === 'backup' ? 'Copia restaurada' : 'Viaje importado');
   } catch (e) { toast('No se pudo importar: ' + e.message, 4000); }
@@ -597,14 +837,22 @@ document.addEventListener('click', async e => {
   const t = e.target.closest('button,[data-sel],a[data-x],#scrim');
   if (!t) return;
   if (t.id === 'scrim' || t.hasAttribute('data-close')) { S.sheet = null; renderLayer(); return; }
-  if (t.dataset.view) { S.view = t.dataset.view; S.sheet = null; S.full = false; render(); $('#main').scrollTop = 0; return; }
-  if (t.id === 'tripsBtn') { S.view = 'trips'; S.sheet = null; S.full = false; render(); $('#main').scrollTop = 0; showStorage(); return; }
-  if (!S.trip && !t.dataset.trip && !['importApply'].includes(t.id)) { if (!t.hasAttribute('data-close')) return; }
-  if (t.dataset.trip) { await DB.kvSet('active', t.dataset.trip); await loadTrip(t.dataset.trip); S.view = 'today'; render(); return; }
+  if (t.hasAttribute('data-drclose')) { setDrawer(false); return; }
+  if (t.id === 'menuBtn' || t.id === 'tripsBtn') { setDrawer(!S.drawer); return; }
+  const go = v => { S.view = v; S.sheet = null; S.full = false; S.drawer = false; render(); $('#main').scrollTop = 0; };
+  if (t.dataset.view) { go(t.dataset.view); return; }
+  if (t.dataset.go) { go(t.dataset.go); return; }
+  if (t.dataset.trip) { await DB.kvSet('active', t.dataset.trip); await loadTrip(t.dataset.trip); S.tripSel = null; S.linkFilter = 'all'; go('today'); return; }
+  if (t.id === 'importApply') { await applyImport(); return; }
+  if (!S.trip) return;
   if (t.dataset.goview) { S.view = t.dataset.goview; render(); $('#main').scrollTop = 0; return; }
   if (t.dataset.goday !== undefined) { S.day = +t.dataset.goday; S.view = 'day'; S.sel = null; render(); $('#main').scrollTop = 0; return; }
   if (t.dataset.day !== undefined) { S.day = +t.dataset.day; S.sel = null; render(); return; }
   if (t.dataset.docf) { S.docFilter = t.dataset.docf; render(); return; }
+  if (t.dataset.tday !== undefined) { S.tripSel = t.dataset.tday === 'all' ? null : +t.dataset.tday; render(); return; }
+  if (t.dataset.tstep) { S.tripSel = Math.max(0, Math.min(S.trip.days.length - 1, S.tripSel + +t.dataset.tstep)); render(); return; }
+  if (t.dataset.lf) { S.linkFilter = t.dataset.lf; render(); return; }
+  if (t.dataset.linkedit) { S.sheet = { type: 'link', id: t.dataset.linkedit }; renderLayer(); return; }
   if (t.dataset.lt) { S.listTab = t.dataset.lt; render(); return; }
   if (t.dataset.ck) {
     for (const c of S.trip.checklists) for (const s of c.sections) for (const i of s.items) if (i.id === t.dataset.ck) { i.done = !i.done; S.openCl = c.id; }
@@ -634,7 +882,26 @@ document.addEventListener('click', async e => {
   if (t.dataset.lodging !== undefined) { const lod = day().lodging; window.open(M.mapsSearchUrl(lod), '_blank', 'noopener'); return; }
   switch (t.id) {
     case 'editBtn': S.edit = !S.edit; render(); break;
-    case 'fullBtn': S.full = !S.full; render(); break;
+    case 'fullBtn': S.full = true; render(); break;
+    case 'fullClose': S.full = false; render(); break;
+    case 'tmFit': S.tripSel != null ? tmap?.fitDay(S.tripSel) : tmap?.fitAll(); break;
+    case 'addLink': S.sheet = { type: 'link', id: null }; renderLayer(); setTimeout(() => $('#lUrl')?.focus(), 250); break;
+    case 'lPaste': {
+      try { const txt = await navigator.clipboard.readText(); const u = M.normalizeUrl(txt); if (u) { $('#lUrl').value = u; $('#lKind').innerHTML = kindBadge(u); $('#lErr').textContent = ''; } else $('#lErr').textContent = 'Lo que hay copiado no parece un enlace.'; }
+      catch { $('#lErr').textContent = 'No se pudo leer el portapapeles. Mantén pulsado el campo y elige «Pegar».'; }
+      break;
+    }
+    case 'lSave': {
+      const url = M.normalizeUrl($('#lUrl').value);
+      if (!url) { $('#lErr').textContent = 'Escribe o pega un enlace válido.'; $('#lUrl').focus(); return; }
+      const rec = { url, title: $('#lTitle').value.trim() || M.linkDefaultTitle(url), day: $('#lDay').value || null, note: $('#lNote').value.trim() || undefined };
+      const ls = S.trip.userLinks = S.trip.userLinks || [];
+      const cur = S.sheet.id ? ls.find(x => x.id === S.sheet.id) : null;
+      if (cur) Object.assign(cur, rec); else ls.unshift({ id: 'lk' + Date.now().toString(36), addedAt: new Date().toISOString(), ...rec });
+      save(); S.sheet = null; render(); toast(cur ? 'Enlace actualizado' : 'Enlace guardado'); break;
+    }
+    case 'lDel': $('#lDel').outerHTML = '<div class="confirm"><span style="flex:1;min-width:150px;font-size:13.5px">¿Borrar este enlace?</span><button class="btn danger" id="lDelYes">Borrar</button><button class="btn" data-close>Cancelar</button></div>'; break;
+    case 'lDelYes': S.trip.userLinks = (S.trip.userLinks || []).filter(x => x.id !== S.sheet.id); save(); S.sheet = null; render(); toast('Enlace borrado'); break;
     case 'fitBtn': map?.fitDay(day()); break;
     case 'offlineMaps': downloadMaps(); break;
     case 'offlineStop': mapsAbort?.abort(); break;
@@ -671,11 +938,10 @@ document.addEventListener('click', async e => {
       const doc = { id: 'doc-u' + Date.now().toString(36), title, kind: $('#nKind').value, status: 'pending', detail: 'Añadido en el móvil', day: $('#nDay').value || null, itemId: null, files: [], userAdded: true };
       S.trip.documents = [...(S.trip.documents || []), doc]; save(); S.sheet = { type: 'doc', id: doc.id }; render(); break;
     }
-    case 'importApply': await applyImport(); break;
     case 'backupBtn': exportBackup(false); break;
     case 'backupFilesBtn': exportBackup(true); break;
     case 'deleteTrip': $('#dangerArea').innerHTML = '<div class="confirm"><span style="flex:1;min-width:150px;font-size:13.5px">Se borrarán el viaje, tus cambios y sus archivos de este iPhone. Exporta antes una copia si la quieres conservar.</span><button class="btn danger" id="delTripYes">Borrar</button><button class="btn" id="delTripNo">Cancelar</button></div>'; break;
-    case 'delTripNo': render(); showStorage(); break;
+    case 'delTripNo': render(); break;
     case 'delTripYes': {
       const id = S.trip.trip.id;
       for (const doc of S.trip.documents || []) for (const f of await DB.filesForDoc(doc.id)) await DB.fileDel(f.id);
@@ -683,7 +949,7 @@ document.addEventListener('click', async e => {
       S.trips = S.trips.filter(x => x.id !== id); await DB.kvSet('trips', S.trips);
       const next = S.trips[0]?.id || null; await DB.kvSet('active', next);
       S.trip = null; if (next) await loadTrip(next);
-      S.view = S.trip ? 'today' : 'trips'; render(); toast('Viaje borrado del móvil'); break;
+      S.view = 'home'; render(); toast('Viaje borrado del móvil'); break;
     }
   }
 });
@@ -703,11 +969,27 @@ document.addEventListener('change', async e => {
     } catch (err) { $('#docErr').textContent = 'No se pudo guardar el archivo: ' + err.message; }
   }
 });
+document.addEventListener('input', e => {
+  if (e.target.id === 'lUrl') { const u = M.normalizeUrl(e.target.value); const k = $('#lKind'); if (k) k.innerHTML = u ? kindBadge(u) : ''; }
+});
 document.addEventListener('toggle', e => { if (e.target.matches?.('details.cl') && e.target.open) S.openCl = e.target.dataset.cl; }, true);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { if (S.sheet) { S.sheet = null; renderLayer(); } else if (S.full) { S.full = false; render(); } }
+  if (e.key === 'Escape') { if (S.drawer) setDrawer(false); else if (S.sheet) { S.sheet = null; renderLayer(); } else if (S.full) { S.full = false; render(); } }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-sel][role=button]')) { e.preventDefault(); e.target.click(); }
 });
+// Gestos: deslizar desde el borde izquierdo abre el menú; deslizar a la izquierda lo cierra.
+let touch0 = null;
+document.addEventListener('touchstart', e => {
+  const p = e.touches[0];
+  touch0 = { x: p.clientX, y: p.clientY, edge: !S.drawer && p.clientX < 22 && !S.full && !S.sheet && S.view !== 'map', open: S.drawer };
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!touch0) return;
+  const p = e.changedTouches[0], dx = p.clientX - touch0.x, dy = Math.abs(p.clientY - touch0.y);
+  if (touch0.edge && dx > 60 && dy < 50) setDrawer(true);
+  else if (touch0.open && dx < -60 && dy < 60) setDrawer(false);
+  touch0 = null;
+}, { passive: true });
 addEventListener('online', () => { S.online = true; tick(); });
 addEventListener('offline', () => { S.online = false; tick(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.trip && S.view === 'today') render(); });

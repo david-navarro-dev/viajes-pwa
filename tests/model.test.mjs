@@ -89,6 +89,43 @@ test('fusión: conserva hecho, notas, añadidos y detecta conflictos', () => {
   assert.equal(summary.missing, 1); assert.equal(summary.localOnly, 1);
 });
 
+test('los enlaces del móvil se conservan al reimportar', () => {
+  const cur = { days: [{ id: 'd1', items: [] }], userLinks: [{ id: 'l1', url: 'https://pin.it/x' }] };
+  const inc = { days: [{ id: 'd1', items: [] }] };
+  assert.equal(M.mergeImport(cur, inc, null).trip.userLinks[0].id, 'l1');
+});
+
+test('tipo y título de enlaces', () => {
+  assert.equal(M.linkKind('https://maps.app.goo.gl/abc'), 'gmaps');
+  assert.equal(M.linkKind('https://www.google.com/maps/@35,139,12z'), 'gmaps');
+  assert.equal(M.linkKind('https://goo.gl/abc'), 'web');
+  assert.equal(M.linkKind('https://pin.it/2abc'), 'pinterest');
+  assert.equal(M.linkKind('https://es.pinterest.com/user/japon/'), 'pinterest');
+  assert.equal(M.linkKind('https://vm.tiktok.com/ZM123/'), 'tiktok');
+  assert.equal(M.linkKind('https://www.instagram.com/reel/C1/'), 'instagram');
+  assert.equal(M.linkKind('https://youtu.be/xyz'), 'youtube');
+  assert.equal(M.linkKind('no es url'), 'web');
+  assert.equal(M.linkDefaultTitle('https://www.instagram.com/reel/C1/'), 'Reel de Instagram');
+  assert.equal(M.normalizeUrl('Mira esto https://pin.it/2abc ¡guay!'), 'https://pin.it/2abc');
+  assert.equal(M.normalizeUrl('tiktok.com/@a/video/1'), 'https://tiktok.com/@a/video/1');
+  assert.equal(M.normalizeUrl('hola'), null);
+});
+
+test('resumen de ruta de un día', () => {
+  const L = (lat, lng) => ({ lat, lng });
+  const d = { items: [
+    { id: 'a', type: 'visit', title: 'A', start: '09:00', location: L(35.0, 135.0) },
+    { id: 't', type: 'transport', mode: 'train', title: 'Tren' },
+    { id: 'b', type: 'visit', title: 'B', start: '11:00', end: '12:00', location: L(35.0, 135.1), done: true },
+    { id: 'c', type: 'meal', title: 'C' },
+  ] };
+  const s = M.daySummary(d);
+  assert.equal(s.stops, 3); assert.equal(s.mapped, 2); assert.equal(s.legs, 1);
+  assert.deepEqual(s.modes, ['train']); assert.equal(s.first, 'A'); assert.equal(s.last, 'B');
+  assert.equal(s.from, '09:00'); assert.equal(s.to, '12:00'); assert.equal(s.done, 1);
+  assert.ok(s.km > 9 && s.km < 9.3);
+});
+
 const DATA = new URL('../../viajes-data/out/japon-2026.json', import.meta.url);
 test('el dataset real es válido y tiene 18 días', { skip: !existsSync(DATA) }, () => {
   const t = JSON.parse(readFileSync(DATA, 'utf8'));

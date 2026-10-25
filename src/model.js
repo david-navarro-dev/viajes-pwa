@@ -219,7 +219,9 @@ export function mergeImport(current, incoming, base) {
     return c ? { ...d, files: c.files || [], status: c.files?.length ? 'available' : d.status } : d;
   });
   (current.documents || []).filter(d => !documents.some(x => x.id === d.id) && (d.userAdded || d.files?.length)).forEach(d => documents.push(d));
-  const trip = { ...structuredClone(incoming), days, checklists, documents };
+  // enlaces de referencia añadidos en el móvil: siempre se conservan
+  const userLinks = structuredClone(current.userLinks || []);
+  const trip = { ...structuredClone(incoming), days, checklists, documents, userLinks };
   return { trip, summary, conflicts };
 }
 
@@ -261,4 +263,66 @@ export function tripStart(trip) {
 export function breakdown(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return { days: Math.floor(s / 86400), hours: Math.floor(s % 86400 / 3600), minutes: Math.floor(s % 3600 / 60) };
+}
+
+/* ---------- Enlaces de referencia ---------- */
+export const LINK_KINDS = {
+  gmaps: 'Google Maps', pinterest: 'Pinterest', tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube', web: 'Web',
+};
+/** Tipo de enlace según su dirección. */
+export function linkKind(url) {
+  let h = '', path = '';
+  try { const u = new URL(url); h = u.hostname.replace(/^www\./, '').toLowerCase(); path = u.pathname; } catch { return 'web'; }
+  if (/(^|\.)maps\.app\.goo\.gl$|^goo\.gl$/.test(h) && (h !== 'goo.gl' || path.startsWith('/maps'))) return 'gmaps';
+  if (/^maps\.google\./.test(h) || (/^google\./.test(h) && path.startsWith('/maps'))) return 'gmaps';
+  if (/(^|\.)pinterest\.[a-z.]+$|^pin\.it$/.test(h)) return 'pinterest';
+  if (/(^|\.)tiktok\.com$/.test(h)) return 'tiktok';
+  if (/(^|\.)instagram\.com$|^instagr\.am$/.test(h)) return 'instagram';
+  if (/(^|\.)youtube\.com$|^youtu\.be$/.test(h)) return 'youtube';
+  return 'web';
+}
+/** Título por defecto cuando el usuario no escribe uno. */
+export function linkDefaultTitle(url) {
+  const k = linkKind(url);
+  let path = '', host = '';
+  try { const u = new URL(url); path = u.pathname; host = u.hostname.replace(/^www\./, ''); } catch { return url; }
+  if (k === 'gmaps') return /\/lists?\//.test(path) || /maps\.app/.test(host) ? 'Lista o lugar de Google Maps' : 'Google Maps';
+  if (k === 'pinterest') return /\/pin\//.test(path) ? 'Pin de Pinterest' : 'Tablero de Pinterest';
+  if (k === 'tiktok') return 'Vídeo de TikTok';
+  if (k === 'instagram') return /\/(reel|reels)\//.test(path) ? 'Reel de Instagram' : /\/p\//.test(path) ? 'Publicación de Instagram' : 'Instagram';
+  if (k === 'youtube') return /\/shorts\//.test(path) ? 'Short de YouTube' : 'Vídeo de YouTube';
+  return host || url;
+}
+/** Normaliza lo que se pega (añade https:// si falta). Devuelve null si no parece una URL. */
+export function normalizeUrl(raw) {
+  let s = String(raw || '').trim();
+  const m = s.match(/https?:\/\/\S+/i); if (m) s = m[0];
+  if (!/^https?:\/\//i.test(s)) { if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s)) s = 'https://' + s; else return null; }
+  try { const u = new URL(s); return u.hostname.includes('.') ? u.href : null; } catch { return null; }
+}
+
+/* ---------- Mapa del viaje ---------- */
+/** Resumen sencillo de la ruta de un día para el mapa del viaje. */
+export function daySummary(day) {
+  const stops = day.items.filter(it => it.type !== 'transport');
+  const geo = day.items.filter(it => hasGeo(it) && it.type !== 'transport');
+  const legs = day.items.filter(it => it.type === 'transport');
+  const modes = [...new Set(legs.map(l => l.mode).filter(Boolean))];
+  const timed = day.items.filter(it => toMin(it.start) != null);
+  let km = 0;
+  for (let i = 1; i < geo.length; i++) km += haversineKm(geo[i - 1].location, geo[i].location);
+  return {
+    stops: stops.length, mapped: geo.length, legs: legs.length, modes,
+    first: geo[0]?.title || stops[0]?.title || null, last: geo.at(-1)?.title || stops.at(-1)?.title || null,
+    from: timed[0]?.start || null, to: timed.at(-1)?.end || timed.at(-1)?.start || null,
+    km: Math.round(km * 10) / 10, done: day.items.filter(i => i.done).length, total: day.items.length,
+    highlights: stops.filter(it => it.type === 'visit').slice(0, 4).map(it => it.title),
+  };
+}
+/** Distancia en línea recta entre dos puntos {lat,lng} en km. */
+export function haversineKm(a, b) {
+  const R = 6371, r = x => x * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
