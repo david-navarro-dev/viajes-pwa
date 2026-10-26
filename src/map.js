@@ -2,7 +2,22 @@
 // Si MapLibre o WebGL no están disponibles, se usa un mapa esquemático en SVG: la agenda nunca se bloquea.
 import { markerOrder, TRANSIT } from './model.js';
 
-export const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+// Estilos de OpenFreeMap (datos de OpenStreetMap). Se elige en Ajustes y se recuerda en este dispositivo.
+export const MAP_STYLES = {
+  liberty: { label: 'Claro', url: 'https://tiles.openfreemap.org/styles/liberty', light: true },
+  positron: { label: 'Claro sencillo', url: 'https://tiles.openfreemap.org/styles/positron', light: true },
+  dark: { label: 'Oscuro', url: 'https://tiles.openfreemap.org/styles/dark', light: false },
+};
+let styleKey = 'liberty';
+try { const k = localStorage.getItem('tf-map'); if (MAP_STYLES[k]) styleKey = k; } catch {}
+export const getMapStyle = () => styleKey;
+export function setMapStyle(k) { if (!MAP_STYLES[k]) return; styleKey = k; try { localStorage.setItem('tf-map', k); } catch {} }
+export const mapIsLight = () => MAP_STYLES[styleKey].light;
+const styleUrl = () => MAP_STYLES[styleKey].url;
+/** Colores de las líneas del mapa del día según el estilo (claro u oscuro). */
+export const lineColors = () => mapIsLight()
+  ? { walk: '#4A525C', transit: '#2F64C8', flight: '#2F64C8', taxi: '#4A525C', none: '#8A929C', sel: '#E8662E', casing: '#FFFFFF' }
+  : { walk: '#B4BCC6', transit: '#7FA8E6', flight: '#7FA8E6', taxi: '#B4BCC6', none: '#6B747E', sel: '#FF8A4C', casing: '#121012' };
 const LABEL = ['coalesce', ['get', 'name:latin'], ['get', 'name_en'], ['get', 'name']];
 
 /** Curva suave entre dos puntos [lng,lat] para que no parezca una ruta real. */
@@ -58,7 +73,7 @@ export class DayMap {
     if (typeof maplibregl === 'undefined' || !webglOk()) { this.fallback = true; return; }
     try {
       this.map = new maplibregl.Map({
-        container: el, style: STYLE_URL, attributionControl: { compact: true },
+        container: el, style: styleUrl(), attributionControl: { compact: true },
         center: [139.77, 35.68], zoom: 11, maxZoom: 18, dragRotate: false, pitchWithRotate: false, touchPitch: false,
         cooperativeGestures: false, fadeDuration: 0,
       });
@@ -71,11 +86,13 @@ export class DayMap {
       }
       this.map.addSource('order', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       const base = { type: 'line', source: 'order', layout: { 'line-cap': 'round', 'line-join': 'round' } };
-      this.map.addLayer({ ...base, id: 'order-walk', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5], 'line-dasharray': [1.5, 1.5] } });
-      this.map.addLayer({ ...base, id: 'order-transit', filter: ['==', ['get', 'kind'], 'transit'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#7FA8E6'], 'line-width': ['case', ['get', 'sel'], 4.5, 3] } });
-      this.map.addLayer({ ...base, id: 'order-flight', filter: ['==', ['get', 'kind'], 'flight'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#7FA8E6'], 'line-width': 2, 'line-dasharray': [0.5, 2.5] } });
-      this.map.addLayer({ ...base, id: 'order-taxi', filter: ['==', ['get', 'kind'], 'taxi'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#B4BCC6'], 'line-width': ['case', ['get', 'sel'], 4, 2.5] } });
-      this.map.addLayer({ ...base, id: 'order-none', filter: ['==', ['get', 'kind'], 'none'], paint: { 'line-color': ['case', ['get', 'sel'], '#FF8A4C', '#6B747E'], 'line-width': 2, 'line-dasharray': [0.5, 2] } });
+      const C = lineColors(), col = k => ['case', ['get', 'sel'], C.sel, C[k]];
+      this.map.addLayer({ ...base, id: 'order-casing', filter: ['!=', ['get', 'kind'], 'flight'], paint: { 'line-color': C.casing, 'line-width': ['case', ['get', 'sel'], 7, 5], 'line-opacity': 0.75 } });
+      this.map.addLayer({ ...base, id: 'order-walk', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': col('walk'), 'line-width': ['case', ['get', 'sel'], 4, 2.5], 'line-dasharray': [1.5, 1.5] } });
+      this.map.addLayer({ ...base, id: 'order-transit', filter: ['==', ['get', 'kind'], 'transit'], paint: { 'line-color': col('transit'), 'line-width': ['case', ['get', 'sel'], 4.5, 3] } });
+      this.map.addLayer({ ...base, id: 'order-flight', filter: ['==', ['get', 'kind'], 'flight'], paint: { 'line-color': col('flight'), 'line-width': 2, 'line-dasharray': [0.5, 2.5] } });
+      this.map.addLayer({ ...base, id: 'order-taxi', filter: ['==', ['get', 'kind'], 'taxi'], paint: { 'line-color': col('taxi'), 'line-width': ['case', ['get', 'sel'], 4, 2.5] } });
+      this.map.addLayer({ ...base, id: 'order-none', filter: ['==', ['get', 'kind'], 'none'], paint: { 'line-color': col('none'), 'line-width': 2, 'line-dasharray': [0.5, 2] } });
       this.loaded = true;
       this.onStatus('ok');
       if (this.pending) { const p = this.pending; this.pending = null; this.render(...p); }
@@ -132,9 +149,9 @@ export class DayMap {
     const dx = Math.max((Math.max(...lngs) - Math.min(...lngs)) * k, 0.004), dy = Math.max(Math.max(...lats) - Math.min(...lats), 0.004);
     const sc = Math.min((W - 80) / dx, (H - 80) / dy), cx = (Math.max(...lngs) + Math.min(...lngs)) / 2, cy = (Math.max(...lats) + Math.min(...lats)) / 2;
     const P = ([x, y]) => [W / 2 + (x - cx) * k * sc, H / 2 - (y - cy) * sc];
-    const col = { walk: '#B4BCC6', transit: '#7FA8E6', flight: '#7FA8E6', taxi: '#B4BCC6', none: '#6B747E' };
+    const col = lineColors();
     const dash = { walk: '5 5', transit: '', flight: '1 6', taxi: '', none: '2 5' };
-    const lines = g.segs.map(s => `<polyline fill="none" stroke="${s.sel ? '#FF8A4C' : col[s.kind]}" stroke-width="${s.sel ? 4 : 2.5}" stroke-dasharray="${dash[s.kind]}" stroke-linecap="round" points="${arc(s.from, s.to).map(P).map(p => p.join(',')).join(' ')}"/>`).join('');
+    const lines = g.segs.map(s => `<polyline fill="none" stroke="${s.sel ? col.sel : col[s.kind]}" stroke-width="${s.sel ? 4 : 2.5}" stroke-dasharray="${dash[s.kind]}" stroke-linecap="round" points="${arc(s.from, s.to).map(P).map(p => p.join(',')).join(' ')}"/>`).join('');
     this.el.innerHTML = `<svg width="${W}" height="${H}" style="position:absolute;inset:0">${lines}</svg><div class="svg-note">Mapa esquemático: el mapa base no está disponible en este dispositivo</div>`;
     for (const it of g.pts) {
       const [x, y] = P(g.pos[it.id]);
@@ -173,12 +190,19 @@ export function tilesForTrip(trip, template, { minZ = 10, maxZ = 14, pad = 0.02 
   return [...set];
 }
 
+/** Fuentes que usa un estilo (para descargar sus glifos sin conexión). */
+function styleFonts(style) {
+  const set = new Set();
+  for (const l of style.layers || []) { const f = l.layout?.['text-font']; if (Array.isArray(f) && f.every(x => typeof x === 'string')) set.add(f.join(',')); }
+  return set.size ? [...set] : ['Noto Sans Regular'];
+}
+
 /** Descarga estilo, recursos y teselas del viaje; el service worker los guarda. */
 export async function prefetchTrip(trip, onProgress, signal) {
-  const style = await (await fetch(STYLE_URL, { signal })).json();
+  const style = await (await fetch(styleUrl(), { signal })).json();
   const tj = await (await fetch(style.sources.openmaptiles.url, { signal })).json();
   const extra = [`${style.sprite}.json`, `${style.sprite}.png`, `${style.sprite}@2x.json`, `${style.sprite}@2x.png`,
-    ...['0-255', '256-511', '8192-8447'].map(r => style.glyphs.replace('{fontstack}', encodeURIComponent('Noto Sans Regular')).replace('{range}', r))];
+    ...styleFonts(style).flatMap(f => ['0-255', '256-511', '8192-8447'].map(r => style.glyphs.replace('{fontstack}', encodeURIComponent(f)).replace('{range}', r)))];
   const tiles = tilesForTrip(trip, tj.tiles[0]);
   const all = [...extra, ...tiles];
   let done = 0, failed = 0, bytes = 0;
@@ -197,7 +221,9 @@ export async function prefetchTrip(trip, onProgress, signal) {
 
 /* ---------- Mapa del viaje: rutas de todos los días ---------- */
 export const DAY_COLORS = ['#FF8A4C', '#5CC6B8', '#B9A2F2', '#7FA8E6', '#FFC24F', '#F06FA8', '#6CC48A', '#E8A37C'];
-export const dayColor = i => DAY_COLORS[i % DAY_COLORS.length];
+// En mapas claros, tonos más intensos para que las rutas destaquen sobre el fondo.
+export const DAY_COLORS_LIGHT = ['#E8662E', '#14917F', '#7650D8', '#2F64C8', '#C28400', '#D6337F', '#25904F', '#B05A30'];
+export const dayColor = i => (mapIsLight() ? DAY_COLORS_LIGHT : DAY_COLORS)[i % DAY_COLORS.length];
 const FAR_KM = 1500; // tramos más largos (vuelos intercontinentales) no se dibujan
 
 function kmBetween([x1, y1], [x2, y2]) {
@@ -243,7 +269,7 @@ export class TripMap {
     if (typeof maplibregl === 'undefined' || !webglOk()) { this.fallback = true; return; }
     try {
       this.map = new maplibregl.Map({
-        container: el, style: STYLE_URL, attributionControl: { compact: true }, center: [137, 36], zoom: 5, maxZoom: 17,
+        container: el, style: styleUrl(), attributionControl: { compact: true }, center: [137, 36], zoom: 5, maxZoom: 17,
         dragRotate: false, pitchWithRotate: false, touchPitch: false, fadeDuration: 0,
       });
     } catch { this.fallback = true; return; }
@@ -257,9 +283,9 @@ export class TripMap {
       this.map.addSource('trip-p', { type: 'geojson', data: fc });
       const lay = { 'line-cap': 'round', 'line-join': 'round' };
       const op = ['case', ['get', 'dim'], 0.22, 0.95];
-      this.map.addLayer({ id: 'trip-casing', type: 'line', source: 'trip-l', layout: lay, paint: { 'line-color': '#121012', 'line-width': ['case', ['get', 'sel'], 8, 5.5], 'line-opacity': ['case', ['get', 'dim'], 0, 0.8] } });
+      this.map.addLayer({ id: 'trip-casing', type: 'line', source: 'trip-l', layout: lay, paint: { 'line-color': lineColors().casing, 'line-width': ['case', ['get', 'sel'], 8, 5.5], 'line-opacity': ['case', ['get', 'dim'], 0, 0.85] } });
       this.map.addLayer({ id: 'trip-line', type: 'line', source: 'trip-l', layout: lay, paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['get', 'sel'], 5, 3], 'line-opacity': op } });
-      this.map.addLayer({ id: 'trip-pt', type: 'circle', source: 'trip-p', paint: { 'circle-radius': ['case', ['get', 'sel'], 5, 3.5], 'circle-color': ['get', 'color'], 'circle-stroke-color': '#121012', 'circle-stroke-width': 1.5, 'circle-opacity': op, 'circle-stroke-opacity': op } });
+      this.map.addLayer({ id: 'trip-pt', type: 'circle', source: 'trip-p', paint: { 'circle-radius': ['case', ['get', 'sel'], 5, 3.5], 'circle-color': ['get', 'color'], 'circle-stroke-color': lineColors().casing, 'circle-stroke-width': 1.5, 'circle-opacity': op, 'circle-stroke-opacity': op } });
       this.map.addLayer({ id: 'trip-hit', type: 'line', source: 'trip-l', layout: lay, paint: { 'line-color': '#000', 'line-width': 22, 'line-opacity': 0.01 } });
       this.map.on('click', e => {
         const f = this.map.queryRenderedFeatures(e.point, { layers: ['trip-hit', 'trip-pt'] })[0];

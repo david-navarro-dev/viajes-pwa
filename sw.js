@@ -1,5 +1,5 @@
 // Tripfolio · service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
-const VERSION = 'v1.4.2';
+const VERSION = 'v1.5.0';
 const APP_CACHE = 'viajes-app-' + VERSION;
 const TILE_CACHE = 'viajes-map-v2';
 const MAX_TILES = 8000;

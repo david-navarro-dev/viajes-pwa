@@ -1,7 +1,7 @@
 // Tripfolio · app principal (sin dependencias de compilación).
 import * as M from './model.js';
 import * as DB from './db.js';
-import { DayMap, TripMap, dayColor, prefetchTrip, tilesForTrip } from './map.js';
+import { DayMap, TripMap, dayColor, prefetchTrip, tilesForTrip, MAP_STYLES, getMapStyle, setMapStyle, mapIsLight, lineColors } from './map.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -116,6 +116,7 @@ function render() {
   document.querySelectorAll('nav.bottom button').forEach(b => b.setAttribute('aria-current', b.dataset.view === S.view ? 'page' : 'false'));
   $('nav.bottom').hidden = !inTrip;
   document.body.dataset.view = S.view;
+  document.documentElement.dataset.map = mapIsLight() ? 'light' : 'dark';
   if (inTrip) {
     $('#tripName').textContent = S.trip.trip.name;
     $('#tripSub').textContent = `${VIEW_TITLE[S.view]} · ${fmtDate(S.trip.trip.startDate, { day: 'numeric', month: 'short' })} – ${fmtDate(S.trip.trip.endDate, { day: 'numeric', month: 'short' })}`;
@@ -275,7 +276,7 @@ function mapWrapHtml(d, order, full) {
   return `<div class="mapwrap ${full ? 'full' : ''}" id="mapwrap">
      <div id="mapSlot"></div>
      ${full ? `<div class="fm-top"><button class="fm-close" id="fullClose">${ICON.back}<span>Volver</span></button><div class="fm-title"><span>Día ${d.n}</span><b>${esc(d.title)}</b></div></div>` : ''}
-     <div class="map-legend"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#A3ABB5" stroke-width="2" stroke-dasharray="4 3"/></svg>A pie</span><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#7FA8E6" stroke-width="2.4"/></svg>Transporte</span>${full ? '' : '<span>Líneas = orden, no ruta</span>'}</div>
+     <div class="map-legend"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="${lineColors().walk}" stroke-width="2" stroke-dasharray="4 3"/></svg>A pie</span><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="${lineColors().transit}" stroke-width="2.4"/></svg>Transporte</span>${full ? '' : '<span>Líneas = orden, no ruta</span>'}</div>
      <div class="map-status" id="mapStatus" hidden></div>
      <div class="map-tools">${full ? '' : `<button class="map-btn" id="fullBtn" aria-label="Mapa a pantalla completa">${ICON.expand}</button>`}<button class="map-btn" id="fitBtn" aria-label="Encuadrar el día">${ICON.fit}</button></div>
      ${full ? `<div class="fm-chips">${d.items.filter(i => order[i.id]).map(i => `<button class="${S.sel === i.id ? 'sel' : ''}" data-sel="${i.id}"><span class="mono">${order[i.id]}</span>${esc(i.title)}</button>`).join('')}</div>` : ''}
@@ -467,6 +468,11 @@ function viewSettings() {
      <div class="muted small">Guarda tus marcas, notas, enlaces y cambios. Hazla antes de borrar datos o cambiar de móvil.</div>
      <div class="row"><button class="btn" id="backupBtn">Exportar copia</button><button class="btn ghost" id="backupFilesBtn">Con archivos de documentos</button></div>
      <div id="backupMsg" class="muted small"></div>
+   </div>
+   <div class="panel">
+     <div class="eyebrow">Estilo del mapa</div>
+     <div class="seg-ctl" role="group" aria-label="Estilo del mapa">${Object.entries(MAP_STYLES).map(([k, v]) => `<button data-mapstyle="${k}" aria-pressed="${getMapStyle() === k}">${v.label}</button>`).join('')}</div>
+     <div class="muted small">Mapas de OpenStreetMap vía OpenFreeMap. Si cambias de estilo, vuelve a descargar los mapas sin conexión: cada estilo guarda sus propios recursos (las teselas se comparten).</div>
    </div>
    <div class="panel">
      <div class="eyebrow">Mapas sin conexión</div>
@@ -852,6 +858,13 @@ document.addEventListener('click', async e => {
   if (t.dataset.tday !== undefined) { S.tripSel = t.dataset.tday === 'all' ? null : +t.dataset.tday; render(); return; }
   if (t.dataset.tstep) { S.tripSel = Math.max(0, Math.min(S.trip.days.length - 1, S.tripSel + +t.dataset.tstep)); render(); return; }
   if (t.dataset.lf) { S.linkFilter = t.dataset.lf; render(); return; }
+  if (t.dataset.mapstyle) {
+    setMapStyle(t.dataset.mapstyle);
+    // los mapas se recrean con el nuevo estilo la próxima vez que se muestran
+    try { map?.map?.remove(); } catch {} try { tmap?.map?.remove(); } catch {}
+    map = mapEl = tmap = tmapEl = null;
+    const y = $('#main').scrollTop; render(); $('#main').scrollTop = y; toast('Estilo del mapa: ' + MAP_STYLES[t.dataset.mapstyle].label); return;
+  }
   if (t.dataset.linkedit) { S.sheet = { type: 'link', id: t.dataset.linkedit }; renderLayer(); return; }
   if (t.dataset.lt) { S.listTab = t.dataset.lt; render(); return; }
   if (t.dataset.ck) {
