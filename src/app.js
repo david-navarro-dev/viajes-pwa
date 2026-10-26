@@ -535,7 +535,8 @@ function mountTripMap() {
   const key = S.trip.trip.id + '|' + S.tripSel;
   tmap.render(S.trip, S.tripSel, { fit: false });
   if (tmap._key !== key) {
-    const pad = S.tripSel != null ? { top: 60, bottom: Math.min(330, (tmapEl.clientHeight || 500) * 0.55), left: 40, right: 40 } : null;
+    const card = document.querySelector('.tm-card');
+    const pad = S.tripSel != null ? { top: 50, bottom: Math.min((card?.offsetHeight || 300) + 30, (tmapEl.clientHeight || 500) * 0.7), left: 40, right: 40 } : null;
     setTimeout(() => (S.tripSel != null ? tmap.fitDay(S.tripSel, pad) : tmap.fitAll()), first ? 120 : 30);
   }
   tmap._key = key;
