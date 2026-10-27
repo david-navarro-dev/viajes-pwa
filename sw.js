@@ -1,17 +1,22 @@
 // Tripfolio · service worker: caché de la app (precarga) + teselas del mapa vistas (caché limitada).
-const VERSION = 'v1.6.0';
+const VERSION = 'v1.7.0';
 const APP_CACHE = 'viajes-app-' + VERSION;
 const TILE_CACHE = 'viajes-map-v2';
 const MAX_TILES = 8000;
 const APP_FILES = [
-  './', './index.html', './manifest.webmanifest', './src/app.js', './src/model.js', './src/db.js', './src/map.js', './src/styles.css',
+  './', './index.html', './manifest.webmanifest', './src/app.js', './src/model.js', './src/db.js', './src/map.js', './src/viewer.js', './src/styles.css',
   './vendor/maplibre/maplibre-gl.js', './vendor/maplibre/maplibre-gl.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
   './icons/logo.svg', './icons/favicon-64.png',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(APP_CACHE).then(c => c.addAll(APP_FILES)));
+  e.waitUntil((async () => {
+    const c = await caches.open(APP_CACHE);
+    await c.addAll(APP_FILES);
+    // Visor de PDF (PDF.js + tipografías): necesario para abrir billetes sin conexión.
+    try { const list = await (await fetch('./vendor/pdfjs/files.json', { cache: 'no-store' })).json(); await c.addAll(list); } catch {}
+  })());
 });
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
@@ -56,7 +61,11 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const hit = await caches.match(req, { ignoreSearch: true });
     if (hit) return hit;
-    try { return await fetch(req); }
+    try {
+      const res = await fetch(req);
+      if (res.ok && url.pathname.includes('/vendor/')) (await caches.open(APP_CACHE)).put(req, res.clone());
+      return res;
+    }
     catch { if (req.mode === 'navigate') return caches.match('./index.html'); return new Response('', { status: 504 }); }
   })());
 });

@@ -1,6 +1,7 @@
 // Tripfolio · app principal (sin dependencias de compilación).
 import * as M from './model.js';
 import * as DB from './db.js';
+import { openViewer } from './viewer.js';
 import { DayMap, TripMap, dayColor, prefetchTrip, tilesForTrip, MAP_STYLES, getMapStyle, setMapStyle, mapIsLight, lineColors } from './map.js';
 
 const $ = s => document.querySelector(s);
@@ -43,7 +44,7 @@ const KIND = { identidad: 'ID', transporte: 'TRN', entrada: 'ENT', alojamiento: 
 const S = {
   trip: null, base: null, trips: [], view: 'home', day: 0, sel: null, edit: false, full: false, drawer: false,
   tripSel: null, linkFilter: 'all',
-  preview: { day: null, min: null }, sheet: null, docFilter: 'day', listTab: 'day', openCl: null,
+  preview: { day: null, min: null }, sheet: null, docFilter: 'all', listTab: 'day', openCl: null,
   online: navigator.onLine, error: null,
 };
 let map = null, mapEl = null, saveTimer = null, tmap = null, tmapEl = null;
@@ -339,22 +340,29 @@ function mountMap() {
 function viewDocs() {
   const real = M.currentDayIndex(S.trip), d = S.trip.days[real > -1 ? real : S.day];
   const all = S.trip.documents || [];
+  const isPend = x => x.status === 'pending' && !x.files?.length;
   let list = all;
   if (S.docFilter === 'day') list = all.filter(x => x.day === d.id);
-  if (S.docFilter === 'pending') list = all.filter(x => x.status === 'pending' && !x.files?.length);
-  const groups = new Map();
-  list.forEach(x => { const k = x.day ? x.day : 'trip'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
-  const pend = all.filter(x => x.status === 'pending' && !x.files?.length).length;
-  const label = k => k === 'trip' ? 'Todo el viaje' : (() => { const dd = S.trip.days.find(x => x.id === k); return `Día ${dd.n} · ${fmtDate(dd.date)}`; })();
+  if (S.docFilter === 'pending') list = all.filter(isPend);
+  // grupos en orden: primero los de todo el viaje, después día a día
+  const order = ['trip', ...S.trip.days.map(x => x.id)];
+  const groups = new Map(order.map(k => [k, []]));
+  list.forEach(x => groups.get(x.day || 'trip')?.push(x));
+  const pend = all.filter(isPend).length, ready = all.length - pend;
+  const label = k => k === 'trip' ? 'Todo el viaje' : (() => { const dd = S.trip.days.find(x => x.id === k); return `Día ${dd.n} · ${fmtDate(dd.date)} · ${dd.title}`; })();
   const row = x => {
     const has = x.files?.length;
     const cls = has ? 'has' : x.status;
-    return `<button class="doc ${cls}" data-doc="${x.id}"><span class="k">${KIND[x.kind] || 'DOC'}</span><div><div class="tt">${esc(x.title)}</div><div class="ds">${has ? `<span style="color:var(--ok)">${has} archivo${has > 1 ? 's' : ''} en el móvil</span> · ` : x.status === 'pending' ? '<span style="color:var(--crit)">Pendiente</span> · ' : ''}${esc(x.detail || '')}</div></div><span class="go">${has ? 'Abrir' : 'Añadir'}</span></button>`;
+    return `<button class="doc ${cls}" data-doc="${x.id}"><span class="k">${KIND[x.kind] || 'DOC'}</span><div><div class="tt">${esc(x.title)}</div><div class="ds">${has ? `<span style="color:var(--ok)">${has} archivo${has > 1 ? 's' : ''} en el móvil</span> · ` : x.status === 'pending' ? '<span style="color:var(--crit)">Pendiente</span> · ' : ''}${esc(x.detail || '')}</div></div><span class="go">${has ? 'Ver' : 'Añadir'}</span></button>`;
   };
+  const shown = [...groups].filter(([, v]) => v.length);
   return `<div class="docs gut">
+   ${pageHead('Documentos', `${ready} de ${all.length} listos${pend ? ` · ${pend} pendiente${pend > 1 ? 's' : ''}` : ''}`)}
+   <div class="prog" aria-hidden="true"><i style="width:${all.length ? ready / all.length * 100 : 0}%"></i></div>
    <div class="seg-ctl" role="group" aria-label="Filtrar documentos">
-     <button data-docf="day" aria-pressed="${S.docFilter === 'day'}">Día ${d.n}</button><button data-docf="pending" aria-pressed="${S.docFilter === 'pending'}">Pendientes · ${pend}</button><button data-docf="all" aria-pressed="${S.docFilter === 'all'}">Todos</button></div>
-   ${groups.size ? [...groups].map(([k, v]) => `<div class="doc-group"><h4>${esc(label(k))}</h4>${v.map(row).join('')}</div>`).join('') : `<div class="panel"><div class="muted">No hay documentos para el día ${d.n}. Cambia de día en Itinerario o mira “Todos”.</div></div>`}
+     <button data-docf="all" aria-pressed="${S.docFilter === 'all'}">Todos · ${all.length}</button><button data-docf="pending" aria-pressed="${S.docFilter === 'pending'}">Pendientes · ${pend}</button><button data-docf="day" aria-pressed="${S.docFilter === 'day'}">${real > -1 ? 'Hoy' : 'Día ' + d.n}</button></div>
+   ${shown.length ? shown.map(([k, v]) => `<div class="doc-group"><h4>${esc(label(k))}</h4>${v.map(row).join('')}</div>`).join('')
+     : `<div class="panel"><div class="muted">${S.docFilter === 'pending' ? 'No queda ningún documento pendiente.' : `No hay documentos para el día ${d.n}.`}</div></div>`}
    <button class="btn ghost block" id="addDoc">+ Añadir documento</button>
    <div class="notice">Los archivos que añades (PDF, capturas, QR) se guardan solo en este iPhone y se abren sin conexión. No se suben a ningún sitio. Haz una copia de seguridad con archivos desde Ajustes y copias.</div>
   </div>`;
@@ -675,7 +683,7 @@ function sheetDoc() {
    <div class="row">${x.files?.length ? '<span class="chip ok">En el móvil</span>' : x.status === 'pending' ? '<span class="chip crit">Pendiente</span>' : '<span class="chip">En Notion / Drive</span>'}</div>
    ${x.detail ? `<div class="muted small">${esc(x.detail)}</div>` : ''}
    ${it ? `<button class="btn ghost" data-open="${it.id}">Ver «${esc(it.title)}»</button>` : ''}
-   <div id="docFiles" class="viewer"><div class="muted small">Cargando…</div></div>
+   <div id="docFiles" class="file-list"><div class="muted small">Cargando…</div></div>
    <label class="btn primary block" for="docFile">${x.files?.length ? 'Añadir otro archivo' : 'Añadir archivo (PDF, imagen o captura)'}</label>
    <input type="file" id="docFile" accept="application/pdf,image/*" hidden>
    ${x.url ? `<a class="btn ghost block" href="${esc(x.url)}" target="_blank" rel="noopener">Abrir origen (${x.url.includes('notion') ? 'Notion' : x.url.includes('drive.google') ? 'Google Drive' : 'web'})</a>` : ''}
@@ -683,16 +691,21 @@ function sheetDoc() {
   </div>`;
 }
 const objUrls = [];
+let docFilesCache = [];
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
 async function loadDocFiles() {
   objUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   const box = $('#docFiles'); if (!box) return;
   try {
     const files = await DB.filesForDoc(S.sheet.id);
+    docFilesCache = files;
     if (!files.length) { box.innerHTML = '<div class="muted small">Aún no hay archivos guardados en el móvil para este documento.</div>'; return; }
-    box.innerHTML = files.map(f => {
-      const u = URL.createObjectURL(f.blob); objUrls.push(u);
-      const view = f.type.startsWith('image/') ? `<img src="${u}" alt="${esc(f.name)}">` : f.type === 'application/pdf' ? `<iframe src="${u}" title="${esc(f.name)}"></iframe>` : '';
-      return `<div class="stack" style="gap:6px">${view}<div class="row"><a class="btn ghost" href="${u}" target="_blank" rel="noopener">Abrir ${esc(f.name)}</a><button class="btn danger" data-delfile="${f.id}">Quitar</button></div></div>`;
+    box.innerHTML = files.map((f, k) => {
+      const isImg = f.type.startsWith('image/');
+      let thumb = `<span class="fc-ico">${f.type === 'application/pdf' ? 'PDF' : 'DOC'}</span>`;
+      if (isImg) { const u = URL.createObjectURL(f.blob); objUrls.push(u); thumb = `<img src="${u}" alt="">`; }
+      return `<div class="file-card"><button class="fc-main" data-viewfile="${k}" aria-label="Ver ${esc(f.name)} a pantalla completa">${thumb}<span class="fc-txt"><b>${esc(f.name)}</b><span>${f.type === 'application/pdf' ? 'PDF' : isImg ? 'Imagen' : 'Archivo'} · ${fmtSize(f.blob.size || 0)}</span></span><span class="fc-go">Ver</span></button>
+        <button class="fc-del" data-delfile="${f.id}" aria-label="Quitar ${esc(f.name)}">${ICON.x}</button></div>`;
     }).join('');
   } catch (e) { box.innerHTML = `<div class="err">No se pudieron leer los archivos: ${esc(e.message)}</div>`; }
 }
@@ -897,6 +910,7 @@ document.addEventListener('click', async e => {
     if (f && t.dataset.keep === 'incoming') { f.item[c.field] = c.incoming; f.item.local.fields = f.item.local.fields.filter(x => x !== c.field); }
     S.trip.conflicts.splice(+t.dataset.conf, 1); save(); render(); return;
   }
+  if (t.dataset.viewfile !== undefined) { const fs = docFilesCache.map(f => ({ name: f.name, type: f.type, blob: f.blob })); if (fs.length) openViewer(fs, +t.dataset.viewfile); return; }
   if (t.dataset.delfile) { await DB.fileDel(t.dataset.delfile); const doc = S.trip.documents.find(o => o.id === S.sheet.id); doc.files = (doc.files || []).filter(x => x !== t.dataset.delfile); save(); renderLayer(); render(); return; }
   if (t.dataset.lodging !== undefined) { const lod = day().lodging; window.open(M.mapsSearchUrl(lod), '_blank', 'noopener'); return; }
   switch (t.id) {

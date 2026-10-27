@@ -60,3 +60,7 @@ Tripfolio: mapa plegado con pin, degradado atardecer sobre fondo oscuro. Los ico
 - **Barra inferior**: Itinerario · Hoy · Documentos.
 - **Mapa del viaje**: rutas de todos los días por colores; al tocar una ruta o su número se abre el resumen del día. Sin mapa base, se dibuja un esquema.
 - **Enlaces**: referencias (Google Maps, Pinterest, TikTok, Instagram, YouTube, web) por viaje y opcionalmente por día. Se guardan en `userLinks`, entran en la copia y se conservan al reimportar.
+
+## Visor de documentos (v1.7)
+
+Los archivos de cada documento se abren a pantalla completa, ajustados para verse enteros; se amplían pellizcando o con doble toque. Los PDF se dibujan con PDF.js (Mozilla, licencia Apache 2.0, en `vendor/pdfjs/`), que el service worker guarda para poder abrir billetes sin conexión.
