@@ -164,18 +164,20 @@ function viewToday() {
     ${it.note ? `<div class="muted small">${esc(it.note)}</div>` : ''}${it.userNote ? `<div class="small">📝 ${esc(it.userNote)}</div>` : ''}`;
   const howBtn = st.next && M.hasGeo(st.next)
     ? `<a class="btn primary" href="${esc(st.from && st.from !== st.next ? M.mapsDirUrl(st.from.location, st.next.location, st.leg ? st.leg.mode : 'walk') : M.mapsSearchUrl(st.next.location))}" target="_blank" rel="noopener">${st.from && st.from !== st.next ? 'Cómo llegar' : 'Ver en Google Maps'}</a>` : '';
+  const simPanel = real === -1 ? `<div class="panel">${Date.now() < startMs ? '' : `<div class="status-line">${status}</div>`}
+     <div class="sim"><label class="field" for="pvDay">Día<select id="pvDay">${S.trip.days.map((x, i) => `<option value="${i}" ${i === idx ? 'selected' : ''}>Día ${x.n} · ${fmtDate(x.date)}</option>`).join('')}</select></label>
+     <label class="field" for="pvTime">Hora (${esc(tzName(d.tz))})<input type="time" id="pvTime" value="${nowMin != null ? M.fmtMin(nowMin) : ''}" ${timed ? '' : 'disabled'}></label></div>
+     ${timed ? '' : '<div class="muted small">Este día no tiene horas: se sigue el orden de la lista.</div>'}</div>` : '';
   return `<div class="today gut">
    ${nowPanel(real, startMs, endMs)}
+   ${real === -1 ? `<div class="preview-sep" role="separator"><span>Vista previa del viaje</span></div>
+     <p class="preview-intro">Así verás esta pantalla cada día durante el viaje. Elige un día y una hora para probarla.</p>${simPanel}` : ''}
    <div class="hero-day">
      <div class="eyebrow">${real > -1 ? 'Hoy' : 'Vista previa'} · Día ${d.n} de ${S.trip.days.length} · ${esc(d.city)}</div>
      <h1>${esc(d.title)}</h1>
      <div class="status-line">${esc(fmtDate(d.date, { weekday: 'long', day: 'numeric', month: 'long' }))} · ${doneN} de ${d.items.length} hechos</div>
      <div class="prog" aria-hidden="true"><i style="width:${d.items.length ? doneN / d.items.length * 100 : 0}%"></i></div>
    </div>
-   ${real === -1 ? `<div class="panel"><div class="status-line">${status}</div>
-     <div class="sim"><label class="field" for="pvDay">Día<select id="pvDay">${S.trip.days.map((x, i) => `<option value="${i}" ${i === idx ? 'selected' : ''}>Día ${x.n} · ${fmtDate(x.date)}</option>`).join('')}</select></label>
-     <label class="field" for="pvTime">Hora (${esc(tzName(d.tz))})<input type="time" id="pvTime" value="${nowMin != null ? M.fmtMin(nowMin) : ''}" ${timed ? '' : 'disabled'}></label></div>
-     ${timed ? '' : '<div class="muted small">Este día no tiene horas: se sigue el orden de la lista.</div>'}</div>` : ''}
    ${d.note ? `<div class="daynote">${esc(d.note)}</div>` : ''}
    ${st.cur ? card(st.cur, 'Ahora') + `<div class="row"><button class="btn" data-done="${st.cur.id}">Marcar como hecho</button><button class="btn ghost" data-open="${st.cur.id}">Detalle</button></div></div>` : ''}
    ${st.next ? card(st.next, st.cur ? 'Después' : 'Siguiente') + `
@@ -199,35 +201,38 @@ function viewToday() {
   </div>`;
 }
 
-/* Fecha, hora actual y cuenta atrás hasta el inicio del viaje (se actualiza en tick). */
+/* Cabecera de Hoy: cuenta atrás grande antes del viaje, día actual durante el viaje. */
 function nowPanel(real, startMs, endMs) {
-  const t = S.trip.trip, home = t.homeTz || 'Europe/Madrid', dest = t.tz;
   const st = M.tripStart(S.trip);
   const before = Date.now() < st.at, after = Date.now() > endMs;
-  const startTxt = `${fmtDate(st.date, { weekday: 'short', day: 'numeric', month: 'short' })}${st.time ? ', ' + st.time : ''} hora de ${tzName(st.tz)}`;
-  return `<div class="nowpanel">
-    <div class="np-date" id="npDate"></div>
-    <div class="np-clocks"><div><span class="eyebrow">${esc(tzName(home))}</span><b class="mono" id="npHome"></b></div><div><span class="eyebrow">${esc(tzName(dest))}</span><b class="mono" id="npDest"></b><span class="muted small" id="npDestDay"></span></div></div>
-    ${before ? `<div class="np-count" aria-live="polite"><div class="cd" id="countdown"></div><div class="muted small">hasta el inicio del viaje · ${esc(startTxt)}${st.item ? ' · ' + esc(st.item.title) : ''}</div></div>`
-      : after ? '<div class="np-count"><div class="muted">El viaje ha terminado.</div></div>'
-      : real > -1 ? `<div class="np-count"><div class="cd">Día ${S.trip.days[real].n} <span class="muted">de ${S.trip.days.length}</span></div></div>` : ''}
-  </div>`;
+  const startTxt = `${fmtDate(st.date, { weekday: 'long', day: 'numeric', month: 'long' })}${st.time ? ' · ' + st.time : ''}`;
+  if (before) {
+    const days = M.calendarDaysUntil(S.trip.trip.startDate, S.trip.trip.homeTz || st.tz);
+    const msg = days <= 0 ? '¡Hoy empieza el viaje!' : days === 1 ? '¡Mañana empieza la aventura!' : 'Ya te queda menos para salir de viaje';
+    return `<section class="cd-hero" aria-live="polite">
+      <div class="cd-msg">${msg}</div>
+      <div class="cd-grid" id="countdown">${cdCells()}</div>
+      <div class="cd-sub">Salida el ${esc(startTxt)}${st.item ? ' · ' + esc(st.item.title) : ''}</div>
+    </section>`;
+  }
+  if (after) return `<section class="cd-hero"><div class="cd-msg">El viaje ha terminado</div><div class="cd-sub">Puedes revisar cualquier día en la vista previa.</div></section>`;
+  if (real > -1) return `<section class="cd-hero during"><div class="np-date" id="npDate"></div><div class="cd-day">Día ${S.trip.days[real].n} <span>de ${S.trip.days.length}</span></div></section>`;
+  return '';
+}
+function cdCells() {
+  const ms = Math.max(0, M.tripStart(S.trip).at - Date.now());
+  const b = M.breakdown(ms), sec = Math.floor(ms / 1000) % 60;
+  const cell = (v, l) => `<div><b>${String(v).padStart(2, '0')}</b><span>${l}</span></div>`;
+  return cell(b.days, b.days === 1 ? 'día' : 'días') + cell(b.hours, 'horas') + cell(b.minutes, 'min') + cell(sec, 'seg');
 }
 function updateNowPanel() {
-  if (!S.trip || !$('#npDate')) return;
-  const t = S.trip.trip, home = t.homeTz || 'Europe/Madrid', dest = t.tz, now = new Date();
-  const f = (tz, o) => now.toLocaleString('es-ES', { timeZone: tz, ...o });
-  $('#npDate').textContent = f(home, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  $('#npHome').textContent = f(home, { hour: '2-digit', minute: '2-digit' });
-  $('#npDest').textContent = f(dest, { hour: '2-digit', minute: '2-digit' });
-  const dh = M.nowIn(home).date, dd = M.nowIn(dest).date;
-  $('#npDestDay').textContent = dh !== dd ? ' · ' + f(dest, { weekday: 'short', day: 'numeric' }) : '';
-  const cd = $('#countdown');
-  if (cd) {
-    const b = M.breakdown(M.tripStart(S.trip).at - Date.now());
-    cd.innerHTML = `<b>${b.days}</b> ${b.days === 1 ? 'día' : 'días'} <b>${b.hours}</b> h <b>${b.minutes}</b> min`;
-  }
+  if (!S.trip) return;
+  const d = $('#npDate');
+  if (d) d.textContent = new Date().toLocaleDateString('es-ES', { timeZone: S.trip.trip.tz, weekday: 'long', day: 'numeric', month: 'long' });
+  const cd = $('#countdown'); if (cd) cd.innerHTML = cdCells();
 }
+// La cuenta atrás va al segundo solo mientras se ve.
+setInterval(() => { if (!document.hidden && $('#countdown')) $('#countdown').innerHTML = cdCells(); }, 1000);
 
 /* ----- Itinerario ----- */
 function viewDay() {
@@ -399,7 +404,7 @@ function viewHome() {
       <span class="ht-cta">Continuar ${ICON.chev}</span></button>`
     : `<button class="hero-trip empty" data-go="add"><span class="ht-glow" aria-hidden="true"></span><span class="eyebrow">Empieza aquí</span><span class="ht-name">Tu primer viaje</span><span class="ht-dates">Importa el itinerario y tenlo siempre a mano, también sin conexión.</span><span class="ht-cta">Añadir un viaje ${ICON.chev}</span></button>`;
   return `<div class="home gut">
-    <div class="home-brand"><img src="icons/logo.svg" alt="" width="52" height="52"><div><div class="hb-name">Trip<b>folio</b></div><div class="muted small">${hi} · ${esc(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }))}</div></div></div>
+    <div class="home-hello"><h1 class="hello">${hi}</h1><div class="hello-date">${esc(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }))}</div></div>
     ${hero}
     <div class="home-grid">
       <button class="tile" data-go="add"><span class="ti-ico">${ICON.plus}</span><b>Añadir un viaje</b><span>Desde Notion o una copia</span></button>
@@ -407,10 +412,10 @@ function viewHome() {
     </div>
     ${t ? `<div class="quick"><span class="eyebrow">Accesos rápidos</span>
       <div class="q-row">
-        <button data-go="map"><i>${ICON.map}</i>Mapa del viaje</button>
-        <button data-go="lists"><i>${ICON.lists}</i>Checklists</button>
-        <button data-go="links"><i>${ICON.link}</i>Enlaces</button>
-        <button data-go="settings"><i>${ICON.gear}</i>Ajustes</button>
+        <button data-go="map" class="q-teal"><i>${ICON.map}</i>Mapa del viaje</button>
+        <button data-go="lists" class="q-green"><i>${ICON.lists}</i>Checklists</button>
+        <button data-go="links" class="q-violet"><i>${ICON.link}</i>Enlaces</button>
+        <button data-go="settings" class="q-blue"><i>${ICON.gear}</i>Ajustes</button>
       </div></div>` : ''}
   </div>`;
 }
@@ -1009,6 +1014,7 @@ addEventListener('offline', () => { S.online = false; tick(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.trip && S.view === 'today') render(); });
 
 /* ---------------- Service worker y actualizaciones ---------------- */
+let userUpdate = false;
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -1016,7 +1022,7 @@ function registerSW() {
       if (document.querySelector('.update-bar')) return;
       const bar = document.createElement('div'); bar.className = 'update-bar';
       bar.innerHTML = '<span>Nueva versión de la app</span><button class="btn">Actualizar</button>';
-      bar.querySelector('button').onclick = () => w.postMessage('skipWaiting');
+      bar.querySelector('button').onclick = () => { userUpdate = true; w.postMessage('skipWaiting'); };
       document.body.appendChild(bar);
     };
     if (reg.waiting) prompt(reg.waiting);
@@ -1026,8 +1032,11 @@ function registerSW() {
     });
     setInterval(() => reg.update().catch(() => {}), 3600e3);
   }).catch(() => {});
+  // Solo se recarga cuando el usuario pide actualizar. En la primera visita el service worker
+  // toma el control (clients.claim) y eso también lanza controllerchange: recargar ahí causaba
+  // una segunda carga con la animación de inicio repetida.
   let reloaded = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (userUpdate && !reloaded) { reloaded = true; location.reload(); } });
 }
 
 boot();

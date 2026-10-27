@@ -255,8 +255,16 @@ export function zonedEpoch(date, time, tz) {
 /** Momento de inicio del viaje: primera hora del primer día, o las 00:00 si no tiene horas. */
 export function tripStart(trip) {
   const d = trip.days[0];
-  const first = d.items.find(i => toMin(i.start) != null);
+  // La salida es el primer traslado con hora (no a pie); si no hay, la primera actividad con hora.
+  // Así un recordatorio previo (p. ej. un check-in online a medianoche) no adelanta la cuenta atrás.
+  const first = d.items.find(i => i.type === 'transport' && i.mode !== 'walk' && toMin(i.start) != null) || d.items.find(i => toMin(i.start) != null);
   return { at: zonedEpoch(d.date, first ? first.start : '00:00', first?.tz || d.tz), item: first || null, tz: first?.tz || d.tz, date: d.date, time: first ? first.start : null };
+}
+
+/** Días de calendario entre hoy y una fecha ISO, en una zona horaria (0 = hoy, 1 = mañana). */
+export function calendarDaysUntil(iso, tz, now = new Date()) {
+  const today = nowIn(tz, now).date;
+  return Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 864e5);
 }
 
 /** Desglose de una diferencia en ms. */

@@ -147,4 +147,8 @@ test('cuenta atrás', () => {
   assert.deepEqual(M.breakdown(-5), { days: 0, hours: 0, minutes: 0 });
   const s = M.tripStart(mini());
   assert.equal(s.time, '09:00');
+  const t2 = mini(); t2.days[0].items.unshift({ id: 'ci', type: 'task', title: 'Check-in', start: '00:05' }, { id: 'car', type: 'transport', mode: 'car', title: 'Coche', start: '08:30' });
+  assert.equal(M.tripStart(t2).time, '08:30');
+  assert.equal(M.calendarDaysUntil('2026-10-28', 'Europe/Madrid', new Date('2026-10-27T11:00:00Z')), 1);
+  assert.equal(M.calendarDaysUntil('2026-10-28', 'Europe/Madrid', new Date('2026-10-27T23:30:00Z')), 0);
 });
